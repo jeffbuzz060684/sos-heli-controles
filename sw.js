@@ -1,4 +1,4 @@
-var CACHE = "sos-heli-controles-v1";
+var CACHE = "sos-heli-controles-v2";
 self.addEventListener("install", function(e){
   self.skipWaiting();
   e.waitUntil(caches.open(CACHE).then(function(c){

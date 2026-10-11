@@ -37,6 +37,9 @@ global.document = {
 };
 global.window = globalThis;
 Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true });
+global.__badge = -1;
+navigator.setAppBadge = n => { global.__badge = n; };
+navigator.clearAppBadge = () => { global.__badge = 0; };
 let confirmAnswer = true;
 global.confirm = () => confirmAnswer;
 global.URL.createObjectURL = () => "blob:stub";
@@ -99,7 +102,7 @@ function resetConfirm(v){ confirmAnswer = v; }
 (async function main(){
   console.log("=== A. Chargement & invariants ===");
   T("seed chargé : 321 matériels", state.items.length === 321);
-  T("version v1", APP_VERSION === "v1");
+  T("version v2", APP_VERSION === "v2");
   T("clé storage", KEY === "sos-heli-controles-v1");
   T("sw.js : nom de cache v1", swSrc.indexOf("sos-heli-controles-v1") >= 0);
   T("sw.js : pas d'ancien cache", swSrc.indexOf("sos-heli-controles-v0") < 0);
@@ -331,6 +334,111 @@ function resetConfirm(v){ confirmAnswer = v; }
   T("seuil 5 j : 5 matériels", state.items.filter(i => i.a5).length === 5);
   T("HS : 6 matériels", state.items.filter(i => isHs(i)).length === 6);
   T("sections uniques ordonnées", sections().length === new Set(state.items.map(i => i.sec)).size);
+
+  console.log("=== J. Journal des modifications (v2) ===");
+  // état v1 (sans journal) accepté au chargement
+  localStorage.setItem(KEY, JSON.stringify({ v:1, items:[{ id:"v1a", sec:"S", mat:"V1 sans log", hist:[] }], tombs:{} }));
+  load();
+  T("journal : état v1 sans log accepté", state.items.length === 1 && Array.isArray(state.log) && state.log.length === 0);
+  importJsonText(snapshot, true);
+  T("journal : registre 321 restauré", state.items.length === 321);
+  state.log = [];
+  // contrôle en un geste → journalisé avec ancien→nouveau
+  const jIt = state.items.find(i => i.num === 292);
+  const jOld = jIt.last;
+  quickCheck(jIt.id);
+  T("journal : quickCheck ajoute une entrée 'controle'", state.log.length === 1 && state.log[0].act === "controle" && state.log[0].id === jIt.id && state.log[0].num === 292);
+  T("journal : diff ancien → aujourd'hui", state.log[0].chg.length === 1 && state.log[0].chg[0][0] === "Dernier contrôle" && state.log[0].chg[0][1] === jOld && state.log[0].chg[0][2] === today());
+  T("journal : note 'un geste' présente", state.log[0].n === "Contrôle enregistré en un geste");
+  // annulation journalisée
+  undoLast();
+  T("journal : annulation journalisée + date restaurée", state.log.length === 2 && state.log[0].act === "annulation" && jIt.last === jOld);
+  T("journal : annulation : diff retour arrière", state.log[0].chg[0][1] === today() && state.log[0].chg[0][2] === jOld);
+  // édition : seuls les champs modifiés sont journalisés
+  openItem(jIt.id);
+  document.getElementById("fResp").value = "RESPONSABLE TEST";
+  saveItem();
+  const jEdit = state.log[0];
+  T("journal : edit journalisé (1 seul champ)", jEdit.act === "edit" && jEdit.chg.length === 1 && jEdit.chg[0][0] === "Responsable" && jIt.resp === "RESPONSABLE TEST");
+  const jLenAfterEdit = state.log.length;
+  openItem(jIt.id);
+  saveItem();
+  T("journal : sauvegarde sans changement → rien journalisé", state.log.length === jLenAfterEdit);
+  // ajout journalisé
+  openItem(null);
+  document.getElementById("fSec").value = "SECTION J";
+  document.getElementById("fMat").value = "JADE TEST J";
+  document.getElementById("fPer").value = "12";
+  saveItem();
+  const jAdded = state.items.find(i => i.mat === "JADE TEST J");
+  T("journal : ajout journalisé", !!jAdded && state.log[0].act === "ajout" && state.log[0].id === jAdded.id && state.log[0].sec === "SECTION J");
+  // suppression + annulation journalisées
+  resetConfirm(true);
+  openItem(jAdded.id);
+  deleteItem();
+  T("journal : suppression journalisée", state.log[0].act === "suppression" && !state.items.some(i => i.id === jAdded.id));
+  undoLast();
+  T("journal : suppression annulée → restauré + journalisé", state.items.some(i => i.id === jAdded.id) && state.log[0].act === "annulation");
+  // plafond 500
+  state.log = [];
+  for(let i = 0; i < 505; i++) state.log.push({ t: i + 1, id: "x" + i, act: "edit", chg: [["N", i, i + 1]] });
+  logAdd("edit", null, [["T", 1, 2]]);
+  T("journal : plafonné à 500 entrées", state.log.length === 500 && state.log[0].chg[0][0] === "T");
+  // fusion Drive dédoublonnée
+  state.log = [];
+  const jE1 = { t: 1000, id: "a", act: "controle", chg: [["Dernier contrôle", "x", "y"]] };
+  const jE2 = { t: 2000, id: "b", act: "edit", chg: [["Responsable", "x", "y"]] };
+  state.log = [jE1];
+  mergeLogs([jE1, jE2]);
+  T("journal : fusion dédoublonnée, tri du plus récent", state.log.length === 2 && state.log[0] === jE2 && state.log[1] === jE1);
+  // export CSV du journal
+  state.log = [
+    { t: 1760161800000, act: "controle", num: 292, sec: "TIC", mat: "WORMS", chg: [["Dernier contrôle", "2026-09-04", "2026-10-11"]], n: "note test" },
+    { t: 1760110700000, act: "edit", num: null, sec: "S", mat: "X", chg: [], n: null }
+  ];
+  let jCap = null;
+  const jDl = global.download;
+  global.download = (name, content) => { jCap = { name, content }; };
+  exportJournalCsv();
+  const jLines = jCap.content.replace(/^\uFEFF/, "").split("\r\n");
+  T("journal CSV : nom daté + BOM UTF-8", jCap.name.indexOf("journal-modifications-sos-heli-") === 0 && jCap.name.indexOf(".csv") > 0 && jCap.content.charCodeAt(0) === 0xFEFF);
+  T("journal CSV : en-têtes", jLines[0] === "\"DATE\";\"HEURE\";\"ACTION\";\"N°\";\"SECTION\";\"MATÉRIEL\";\"MODIFICATIONS\";\"NOTE\"");
+  T("journal CSV : log+1 lignes, ancien en premier", jLines.length === 3 && jLines[1].indexOf("Modification") >= 0 && jLines[2].indexOf("Contrôle") >= 0);
+  T("journal CSV : diff lisible ancien → nouveau", jLines[2].indexOf("Dernier contrôle : 2026-09-04 → 2026-10-11") >= 0 && jLines[2].indexOf("note test") >= 0);
+  global.download = jDl;
+  // panneau journal + effacement
+  state.log = [{ t: Date.now(), act: "controle", num: 1, sec: "S", mat: "MAT J", chg: [], n: "x" }];
+  openJournal();
+  T("journal : panneau ouvert, entrée rendue", document.getElementById("jSheet").classList.contains("open") && document.getElementById("jList").innerHTML.indexOf("MAT J") >= 0);
+  closeJournal();
+  T("journal : panneau fermé", !document.getElementById("jSheet").classList.contains("open"));
+  resetConfirm(false);
+  clearJournal();
+  T("journal : effacement refusé sans confirmation", state.log.length === 1);
+  resetConfirm(true);
+  clearJournal();
+  T("journal : effacement confirmé vide le journal", state.log.length === 0);
+
+  console.log("=== K. Alertes (v2) ===");
+  state = defaultState(); primeShadow(); persist(); renderAll();
+  const kAl = alertItems();
+  const kRet = state.items.filter(i => statutOf(i) === "retard").length;
+  T("alertes : contient tous les retards", kAl.filter(i => statutOf(i) === "retard").length === kRet);
+  T("alertes : uniquement retard ou ≤ 7 j", kAl.every(i => statutOf(i) === "retard" || daysTo(nextOf(i).d) <= 7));
+  T("alertes : matériels HS exclus", kAl.every(i => statutOf(i) !== "hs"));
+  T("alertes : trié par prochaine date", kAl.every((i, x) => x === 0 || (nextOf(kAl[x - 1]).d || "9999") <= (nextOf(i).d || "9999")));
+  T("alertes : bandeau rendu dans #alerts", document.getElementById("alerts").innerHTML.indexOf("🔔 Alertes : " + kAl.length) >= 0);
+  T("alertes : badge = nombre d'alertes", global.__badge === kAl.length);
+  T("alertes : compteur retard affiché", document.getElementById("alerts").innerHTML.indexOf(kRet + " en retard") >= 0);
+  // contrôle d'un retard avec périodicité → sort des alertes, badge recalculé
+  // (le GE WORMS n°292 : per 1 mois, pas de date limite → prochain à J+31 après contrôle)
+  const kTarget = kAl.find(i => i.num === 292);
+  T("alertes : cible trouvée (GE WORMS n°292 en retard)", !!kTarget && statutOf(kTarget) === "retard");
+  const kBefore = alertItems().length;
+  quickCheck(kTarget.id);
+  const kAfter = alertItems();
+  T("alertes : contrôle fait sortir le matériel", statutOf(kTarget) !== "retard" && !kAfter.some(i => i.id === kTarget.id));
+  T("alertes : badge recalculé après contrôle", global.__badge === kAfter.length && global.__badge === kBefore - 1);
 
   if(driveTimer) clearTimeout(driveTimer);
   console.log("\n================================");

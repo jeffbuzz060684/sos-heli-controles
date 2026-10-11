@@ -13,9 +13,18 @@ registre Excel « SUIVI CONTROL SOS_HELI.xlsx » (321 matériels, import 2026-10
   daté avec note ; historique par matériel ; Annuler 5 s.
 - **Filtres** par statut, par section, recherche plein texte ; sections repliables.
 - **Ajout / édition / suppression** de matériels, hors-service, notes, responsable.
+- **🕘 Journal des modifications (v2)** : chaque action (contrôle, édition champ par
+  champ, ajout, suppression, annulation, import) est horodatée ; export **CSV
+  journal** (DATE;HEURE;ACTION;N°;SECTION;MATÉRIEL;MODIFICATIONS;NOTE) à
+  répercuter dans l'Excel d'origine, plafond 500 entrées, fusion Drive
+  dédoublonnée.
+- **🔔 Alertes (v2)** : bandeau en tête de registre (retards + contrôles à faire
+  sous 7 jours, HS exclus), bouton ✔ par ligne, badge sur l'icône de l'app
+  installée (badge iOS/Android).
 - **Sauvegarde Google Drive** (dossier `taffbmpm` par défaut, configurable) :
   fusion multi-appareils (dernier modifié gagne + pierres tombales), auto 30 s.
-- **Exports** : JSON (sauvegarde/restauration) et CSV ouvrable dans Excel.
+- **Exports** : JSON (sauvegarde/restauration), CSV registre et CSV journal
+  ouvrables dans Excel.
 
 ## Configuration Google (une seule fois)
 
@@ -29,11 +38,7 @@ registre Excel « SUIVI CONTROL SOS_HELI.xlsx » (321 matériels, import 2026-10
 
 ## Développement
 
-- `index.html` : app complète (sans dépendance). `sw.js` : service worker (cache `sos-heli-controles-v1`).
+- `index.html` : app complète (sans dépendance). `sw.js` : service worker (cache `sos-heli-controles-v2`).
 - `tools/gen-icons.js` : icônes PNG générées au build (pur Node + zlib).
-- `v1-test-harness.js` : harnais Node (89 tests) — `node v1-test-harness.js index.html sw.js` (joué par la CI à chaque push).
+- `v1-test-harness.js` : harnais Node (121 tests) — `node v1-test-harness.js index.html sw.js` (joué par la CI à chaque push).
 - Données initiales : `SEED` embarqué dans `index.html` (extrait de l'Excel le 2026-10-11).
-
-## Déploiement
-
-Chaque push sur `main` redéploie le site (workflow GitHub Actions) et rejoue les tests.
