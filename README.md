@@ -21,10 +21,20 @@ registre Excel « SUIVI CONTROL SOS_HELI.xlsx » (321 matériels, import 2026-10
 - **🔔 Alertes (v2)** : bandeau en tête de registre (retards + contrôles à faire
   sous 7 jours, HS exclus), bouton ✔ par ligne, badge sur l'icône de l'app
   installée (badge iOS/Android).
+- **🟩 Export Excel .xlsx (v3)** : régénère le registre à l'identique de
+  l'original — mêmes en-têtes, mise en forme (Arial 20, couleurs, fusions, volet
+  figé, largeurs), et surtout **formules vivantes** (`TODAY()`, `EDATE`, statuts
+  avec variante ≤ 5 jours des WORMS GE) qui recalculent seules à l'ouverture.
+  Fichier `SUIVI CONTROL SOS_HELI-AAAA-MM-JJ.xlsx`, zéro dépendance (ZIP OOXML
+  écrit en pur JS).
+- **📥 Import Excel .xlsx (v3)** : le champ d'import accepte directement le
+  vrai registre (détection par signature) ; formules partagées, sharedStrings,
+  dates et statuts en cache décodés ; n° + historiques conservés par
+  correspondance N°/matériel ; confirmation + secours local avant remplacement.
 - **Sauvegarde Google Drive** (dossier `taffbmpm` par défaut, configurable) :
   fusion multi-appareils (dernier modifié gagne + pierres tombales), auto 30 s.
-- **Exports** : JSON (sauvegarde/restauration), CSV registre et CSV journal
-  ouvrables dans Excel.
+- **Exports** : JSON (sauvegarde/restauration), **Excel .xlsx**, CSV registre et
+  CSV journal ouvrables dans Excel.
 
 ## Configuration Google (une seule fois)
 
@@ -38,7 +48,9 @@ registre Excel « SUIVI CONTROL SOS_HELI.xlsx » (321 matériels, import 2026-10
 
 ## Développement
 
-- `index.html` : app complète (sans dépendance). `sw.js` : service worker (cache `sos-heli-controles-v2`).
+- `index.html` : app complète (sans dépendance). `sw.js` : service worker (cache `sos-heli-controles-v3`).
 - `tools/gen-icons.js` : icônes PNG générées au build (pur Node + zlib).
-- `v1-test-harness.js` : harnais Node (121 tests) — `node v1-test-harness.js index.html sw.js` (joué par la CI à chaque push).
+- `v1-test-harness.js` : harnais Node (169 tests, dont export xlsx vérifié
+  cellule par cellule et import du registre réel) —
+  `node v1-test-harness.js index.html sw.js` (joué par la CI à chaque push).
 - Données initiales : `SEED` embarqué dans `index.html` (extrait de l'Excel le 2026-10-11).

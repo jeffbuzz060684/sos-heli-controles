@@ -44,6 +44,23 @@ let confirmAnswer = true;
 global.confirm = () => confirmAnswer;
 global.URL.createObjectURL = () => "blob:stub";
 global.URL.revokeObjectURL = () => {};
+global.FileReader = function(){
+  this.onload = null;
+  this.readAsArrayBuffer = (f) => {
+    setTimeout(() => {
+      Promise.resolve((f && f.arrayBuffer) ? f.arrayBuffer() : f).then(ab => {
+        this.result = ab; // un vrai navigateur remplit reader.result
+        if(this.onload) this.onload({ target: { result: ab } });
+      });
+    }, 5);
+  };
+  this.readAsText = (f) => {
+    setTimeout(() => {
+      this.result = (f && f.text) ? f.text() : String(f);
+      if(this.onload) this.onload({ target: { result: this.result } });
+    }, 5);
+  };
+};
 
 // fetch stub pilotable
 let reqs = [];
@@ -102,7 +119,7 @@ function resetConfirm(v){ confirmAnswer = v; }
 (async function main(){
   console.log("=== A. Chargement & invariants ===");
   T("seed chargé : 321 matériels", state.items.length === 321);
-  T("version v2", APP_VERSION === "v2");
+  T("version v3", APP_VERSION === "v3");
   T("clé storage", KEY === "sos-heli-controles-v1");
   T("sw.js : cache aligné sur la version app", swSrc.indexOf("sos-heli-controles-" + APP_VERSION) >= 0);
   T("sw.js : pas d'ancien cache", swSrc.indexOf("sos-heli-controles-v0") < 0);
@@ -439,6 +456,203 @@ function resetConfirm(v){ confirmAnswer = v; }
   const kAfter = alertItems();
   T("alertes : contrôle fait sortir le matériel", statutOf(kTarget) !== "retard" && !kAfter.some(i => i.id === kTarget.id));
   T("alertes : badge recalculé après contrôle", global.__badge === kAfter.length && global.__badge === kBefore - 1);
+
+  console.log("=== L. Export Excel (.xlsx) ===");
+  let xCap = null;
+  const xDl = global.download;
+  global.download = (name, content) => { xCap = { name, content }; };
+  exportXlsx();
+  const xb = xCap.content;
+  T("xlsx : signature ZIP (PK\\x03\\x04)", xb && xb.length > 4 && xb[0] === 0x50 && xb[1] === 0x4B && xb[2] === 0x03 && xb[3] === 0x04);
+  T("xlsx : nom de fichier identique au registre d'origine", xCap.name === "SUIVI CONTROL SOS_HELI-" + today() + ".xlsx");
+  const zlib = require("zlib");
+  function unzipN(u8){
+    const files = {};
+    const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    let eocd = -1;
+    for(let i = u8.length - 22; i >= 0; i--){ if(dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; } }
+    if(eocd < 0) throw new Error("EOCD introuvable");
+    const count = dv.getUint16(eocd + 10, true);
+    let off = dv.getUint32(eocd + 16, true);
+    for(let k = 0; k < count; k++){
+      const method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true);
+      const nlen = dv.getUint16(off + 28, true), elen = dv.getUint16(off + 30, true), clen = dv.getUint16(off + 32, true);
+      const lho = dv.getUint32(off + 42, true);
+      const name = Buffer.from(u8.subarray(off + 46, off + 46 + nlen)).toString("utf8");
+      const lnlen = dv.getUint16(lho + 26, true), lelen = dv.getUint16(lho + 28, true);
+      let data = u8.subarray(lho + 30 + lnlen + lelen, lho + 30 + lnlen + lelen + csize);
+      if(method === 8) data = zlib.inflateRawSync(Buffer.from(data));
+      else if(method !== 0) throw new Error("méthode " + method);
+      files[name] = Buffer.from(data);
+      off += 46 + nlen + elen + clen;
+    }
+    return files;
+  }
+  const xf = unzipN(new Uint8Array(xb));
+  T("xlsx : 8 fichiers du package OOXML", Object.keys(xf).length === 8 && !!xf["[Content_Types].xml"] && !!xf["xl/worksheets/sheet1.xml"] && !!xf["xl/styles.xml"] && !!xf["docProps/core.xml"]);
+  const wbx = xf["xl/workbook.xml"].toString("utf8");
+  T("xlsx : feuille « Registre Matériel »", wbx.includes('name="Registre Matériel"'));
+  T("xlsx : recalcul forcé à l'ouverture (TODAY() vivant)", wbx.includes('fullCalcOnLoad="1"'));
+  const sx = xf["xl/worksheets/sheet1.xml"].toString("utf8");
+  const nRows = (sx.match(/<row /g) || []).length;
+  T("xlsx : 326 lignes (titre, date, compteurs ×2, en-têtes + 321 données)", nRows === 5 + state.items.length);
+  T("xlsx : en-têtes d'origine en ligne 8", sx.includes("MATÉRIEL / ÉLÉMENT") && sx.includes("STATUT ACTUALISÉ") && sx.includes("PLAFONNÉ À\nLA DATE LIMITE ?") && sx.includes("OBSERVATION / NOTES BRUTES"));
+  T("xlsx : formule prochain contrôle exacte (H9)", sx.includes('IF(AND(ISNUMBER(F9),ISNUMBER(E9)),IF(AND(ISNUMBER(G9),EDATE(F9,E9)&gt;G9),G9,EDATE(F9,E9)),IF(ISNUMBER(G9),G9,""))'));
+  T("xlsx : formule plafonné exacte (I9)", sx.includes('IF(AND(ISNUMBER(F9),ISNUMBER(E9),ISNUMBER(G9),EDATE(F9,E9)&gt;G9),"⚠️ Oui","")'));
+  T("xlsx : formule jours restants exacte (J9)", sx.includes('IF(ISNUMBER(H9),H9-TODAY(),"")'));
+  T("xlsx : formule statut ≤ 2 mois exacte (K9)", sx.includes('IF($H9&lt;TODAY(),"🔴 En retard",IF($H9-TODAY()&lt;=60,"🟠 À prévoir (≤ 2 mois)","🟢 OK")'));
+  T("xlsx : détection HS par notes REFORME/H.S (K9)", sx.includes('IF(OR(ISNUMBER(SEARCH("REFORME",$L9)),ISNUMBER(SEARCH("H.S",$L9))),"🔴 Hors service / Réformé"'));
+  const gi = state.items.findIndex(i => i.num === 292);
+  const grow = 9 + gi;
+  T("xlsx : variante ≤ 5 JOURS sur les WORMS GE (K" + grow + ")", sx.includes('&lt;=5,"🟠 À prévoir (≤ 5 JOURS)"'));
+  T("xlsx : date serial du dernier contrôle GE 1 (F" + grow + ")", sx.includes('<c r="F' + grow + '" s="2"><v>' + isoToSerial(state.items[gi].last) + '</v></c>'));
+  T("xlsx : compteurs COUNTIF identiques à l'original", sx.includes("COUNTA(A9:A" + (8 + state.items.length) + ")") && sx.includes('COUNTIF(K9:K' + (8 + state.items.length) + ',"🟢 OK")') && sx.includes('COUNTIF(K9:K' + (8 + state.items.length) + ',"🔴 En retard")'));
+  T("xlsx : 10 fusions comme l'original", sx.includes('<mergeCells count="10">') && sx.includes('<mergeCell ref="A1:M1"/>') && sx.includes('<mergeCell ref="J4:K4"/>'));
+  T("xlsx : volet figé sous la ligne 8 (A9)", sx.includes('<pane ySplit="8" topLeftCell="A9"'));
+  T("xlsx : quadrillage masqué comme l'original", sx.includes('showGridLines="0"'));
+  T("xlsx : 13 colonnes aux largeurs d'origine", (sx.match(/customWidth="1"/g) || []).length === 13 && sx.includes('width="117.43"'));
+  const stx = xf["xl/styles.xml"].toString("utf8");
+  T("xlsx : format date mm-dd-yy + jours entier", stx.includes('formatCode="mm-dd-yy"') && stx.includes('formatCode="0"'));
+  T("xlsx : Arial 20 gras partout, en-têtes bleus/blancs", stx.includes('<name val="Arial"/>') && stx.includes('rgb="FF2E5AAC"') && stx.includes('rgb="FFFFFFFF"'));
+  T("xlsx : statuts en cache pour lecture directe", sx.includes("⚪ Sans échéance connue</v>") && sx.includes("🔴 Hors service / Réformé</v>"));
+  T("xlsx : convention '/' du registre pour notes vides (colonne L)", (function(){ var nL = (sx.match(/r="L\d+" s="\d+" t="inlineStr"><is><t>\/<\/t><\/is>/g) || []).length; var nD = (sx.match(/r="D\d+" s="\d+" t="inlineStr"><is><t>\/<\/t><\/is>/g) || []).length; return nL === state.items.filter(function(i){ return !i.notes; }).length && nD === state.items.filter(function(i){ return i.resp === "/"; }).length; })());
+  fs.writeFileSync("/tmp/export-test.xlsx", Buffer.from(xb));
+  global.download = xDl;
+
+  console.log("=== M. Import Excel (.xlsx) ===");
+  // fixture xlsx construit ici : entrées compressed (deflate) + stored, sharedStrings, formules, ligne 777
+  function zipMk(entries){ // [{name, data(Buffer), deflate}]
+    const enc = new TextEncoder(), chunks = [], central = [];
+    let off = 0;
+    const push = u8 => { chunks.push(u8); off += u8.length; };
+    entries.forEach(e2 => {
+      const raw = Buffer.isBuffer(e2.data) ? new Uint8Array(e2.data) : (e2.data instanceof Uint8Array ? e2.data : enc.encode(e2.data));
+      const data = e2.deflate ? new Uint8Array(zlib.deflateRawSync(Buffer.from(raw))) : raw;
+      const nameU8 = enc.encode(e2.name);
+      const crc = crc32(raw);
+      const lh = new Uint8Array(30), dv = new DataView(lh.buffer);
+      dv.setUint32(0, 0x04034b50, true); dv.setUint16(4, 20, true);
+      dv.setUint16(8, e2.deflate ? 8 : 0, true); dv.setUint16(12, 0x21, true);
+      dv.setUint32(14, crc, true); dv.setUint32(18, data.length, true); dv.setUint32(22, raw.length, true);
+      dv.setUint16(26, nameU8.length, true); dv.setUint16(28, 0, true);
+      push(lh); push(nameU8); push(data);
+      central.push({ nameU8, crc, csize: data.length, usize: raw.length, method: e2.deflate ? 8 : 0, lho: off - data.length - nameU8.length - 30 });
+    });
+    const cdStart = off;
+    central.forEach(c2 => {
+      const ch = new Uint8Array(46), dv = new DataView(ch.buffer);
+      dv.setUint32(0, 0x02014b50, true); dv.setUint16(4, 20, true); dv.setUint16(6, 20, true);
+      dv.setUint16(10, c2.method, true); dv.setUint16(12, 0, true); dv.setUint16(14, 0x21, true);
+      dv.setUint32(16, c2.crc, true); dv.setUint32(20, c2.csize, true); dv.setUint32(24, c2.usize, true);
+      dv.setUint16(28, c2.nameU8.length, true); dv.setUint32(42, c2.lho, true);
+      push(ch); push(c2.nameU8);
+    });
+    const eo = new Uint8Array(22), dv2 = new DataView(eo.buffer);
+    dv2.setUint32(0, 0x06054b50, true); dv2.setUint16(8, central.length, true); dv2.setUint16(10, central.length, true);
+    dv2.setUint32(12, off - cdStart, true); dv2.setUint32(16, cdStart, true);
+    push(eo);
+    const out = new Uint8Array(off); let p = 0;
+    chunks.forEach(c2 => { out.set(c2, p); p += c2.length; });
+    return out;
+  }
+  const d45 = Math.round((Date.parse(today()) - 45*86400000)/86400000) + 25569;
+  const fxSheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+    + '<row r="8"><c r="A8" t="inlineStr"><is><t>N°</t></is></c></row>'
+    + '<row r="9"><c r="A9"><v>1</v></c><c r="B9" t="s"><v>0</v></c><c r="C9" t="s"><v>1</v></c>'
+    + '<c r="D9" t="inlineStr"><is><t>CHEF TEST</t></is></c><c r="E9"><v>6</v></c>'
+    + '<c r="F9"><v>' + isoToSerial("2026-01-15") + '</v></c><c r="G9"><v>' + isoToSerial("2027-01-15") + '</v></c>'
+    + '<c r="H9"><f>IF(1,"","")</f></c><c r="K9"><f>IF($H9-TODAY()&lt;=60,"🟠 À prévoir (≤ 2 mois)","🟢 OK")</f></c>'
+    + '<c r="M9" t="inlineStr"><is><t>REF-42</t></is></c></row>'
+    + '<row r="10"><c r="A10"><v>2</v></c><c r="B10" t="inlineStr"><is><t>GE SECTION</t></is></c>'
+    + '<c r="C10" t="inlineStr"><is><t>GE Test</t></is></c><c r="E10"><v>1</v></c><c r="F10"><v>' + d45 + '</v></c>'
+    + '<c r="K10"><f>IF($H10-TODAY()&lt;=5,"🟠 À prévoir (≤ 5 JOURS)","🟢 OK")</f></c></row>'
+    + '<row r="11"><c r="A11"><v>3</v></c><c r="B11" t="inlineStr"><is><t>SEC</t></is></c>'
+    + '<c r="C11" t="inlineStr"><is><t>Corde Test</t></is></c>'
+    + '<c r="L11" t="inlineStr"><is><t>REFORME (966 descente)</t></is></c></row>'
+    + '<row r="12"><c r="A12"><v>321</v></c><c r="B12" t="inlineStr"><is><t>777</t></is></c></row>'
+    + '</sheetData></worksheet>';
+  const fxFiles = [
+    { name: "[Content_Types].xml", data: '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>' },
+    { name: "xl/workbook.xml", data: '<?xml version="1.0"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Registre Matériel" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+    { name: "xl/_rels/workbook.xml.rels", data: '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>' },
+    { name: "xl/sharedStrings.xml", data: '<?xml version="1.0"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="2"><si><t>Section T</t></si><si><t>Pompe Test</t></si></sst>', deflate: true },
+    { name: "xl/worksheets/sheet1.xml", data: fxSheet, deflate: true }
+  ];
+  const fxBytes = zipMk(fxFiles);
+  T("import xlsx : fixture valide (PK)", fxBytes[0] === 0x50 && fxBytes[1] === 0x4B);
+  const fxItems = await xlsxRead(fxBytes);
+  T("import xlsx : 3 matériels (ligne 777 écartée)", Array.isArray(fxItems) && fxItems.length === 3);
+  T("import xlsx : sharedStrings lus (section/matériel)", fxItems[0].sec === "Section T" && fxItems[0].mat === "Pompe Test" && fxItems[0].num === 1);
+  T("import xlsx : dates serial → ISO", fxItems[0].last === "2026-01-15" && fxItems[0].lim === "2027-01-15");
+  T("import xlsx : périodicité + responsable + réf", fxItems[0].per === 6 && fxItems[0].resp === "CHEF TEST" && fxItems[0].ref === "REF-42");
+  T("import xlsx : variante ≤ 5 JOURS détectée (a5)", fxItems[1].a5 === true && fxItems[0].a5 === false);
+  T("import xlsx : dates converties (J-45)", fxItems[1].last === new Date(Date.parse(today()) - 45*86400000).toISOString().slice(0,10));
+  T("import xlsx : HS par notes REFORME", fxItems[2].hs === true && fxItems[2].notes === "REFORME (966 descente)");
+  // import complet avec confirmation, journal et préservation historique
+  state = defaultState(); primeShadow(); persist(); renderAll();
+  const keepIt = state.items.find(i => i.num === 4);
+  keepIt.hist = [{ d: "2026-07-06", n: "contrôle bureau veritas" }];
+  const keepId = keepIt.id;
+  const fx4 = JSON.parse(JSON.stringify(keepIt)); // simulate: même num+mat réimporté
+  fxFiles[4] = { name: "xl/worksheets/sheet1.xml", data: '<?xml version="1.0"?>'
+    + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+    + '<row r="9"><c r="A9"><v>4</v></c><c r="B9" t="inlineStr"><is><t>CAPINAV</t></is></c>'
+    + '<c r="C9" t="inlineStr"><is><t>' + keepIt.mat.replace(/</g, "&lt;") + '</t></is></c>'
+    + '<c r="F9"><v>' + isoToSerial("2026-07-06") + '</v></c><c r="E9"><v>6</v></c>'
+    + '<c r="G9"><v>' + isoToSerial("2031-07-01") + '</v></c></row>'
+    + '</sheetData></worksheet>', deflate: true };
+  state.items = [keepIt]; primeShadow(); persist(); renderAll();
+  state.log = [];
+  const fx2 = zipMk(fxFiles);
+  await importXlsxBuffer(fx2.buffer.slice(fx2.byteOffset, fx2.byteOffset + fx2.byteLength));
+  await flush();
+  T("import xlsx : registre remplacé (1 matériel)", state.items.length === 1 && state.items[0].num === 4 && state.items[0].sec === "CAPINAV");
+  T("import xlsx : id + historique conservés (même num+mat)", state.items[0].id === keepId && state.items[0].hist.length === 1 && state.items[0].hist[0].n === "contrôle bureau veritas");
+  T("import xlsx : journalisé comme import", state.log.length === 1 && state.log[0].act === "import" && state.log[0].chg.some(c => c[0] === "Source"));
+  T("import xlsx : secours local créé", !!store[KEY + "-secours"]);
+  // confirmation refusée
+  const beforeN = state.items.length;
+  resetConfirm(false);
+  await importXlsxBuffer(fx2.buffer.slice(fx2.byteOffset, fx2.byteOffset + fx2.byteLength));
+  await flush();
+  T("import xlsx : refus = rien changé", state.items.length === beforeN);
+  // fichier corrompu → refus propre
+  resetConfirm(true);
+  state.log = [];
+  await importXlsxBuffer(new Uint8Array([0x50, 0x4B, 0x03, 0x04, 1, 2, 3, 4, 5]).buffer);
+  await flush();
+  T("import xlsx : fichier corrompu refusé proprement", document.getElementById("toast").innerHTML.indexOf("illisible") >= 0 && state.items.length === beforeN);
+  // branchement importFile : PK → Excel, sinon JSON
+  state = defaultState(); primeShadow(); persist(); renderAll();
+  const evX = { target: { files: [{ arrayBuffer: async () => fx2.buffer.slice(fx2.byteOffset, fx2.byteOffset + fx2.byteLength) }] } };
+  resetConfirm(true);
+  importFile(evX);
+  await flush();
+  T("importFile : .xlsx détecté par signature PK", state.items.length === 1 && state.items[0].num === 4);
+  resetConfirm(true);
+  T("importFile : JSON inchangé (importJsonText)", importJsonText(snapshot, true) === true);
+
+  // test réel (local uniquement, absent de la CI) : le registre Excel de Jade
+  const realPath = "/home/user/uploads/SUIVI CONTROL SOS_HELI.xlsx";
+  if(fs.existsSync(realPath)){
+    const realItems = await xlsxRead(new Uint8Array(fs.readFileSync(realPath)));
+    T("réel : 321 matériels extraits", Array.isArray(realItems) && realItems.length === 321);
+    T("réel : 5 WORMS GE à seuil 5 jours", realItems.filter(i => i.a5).length === 5);
+    T("réel : 6 hors service", realItems.filter(i => i.hs).length === 6);
+    const rg1 = realItems.find(i => i.mat === "2016 BMPM GE 1");
+    T("réel : GE 1 (per 1, dernier 2026-09-04)", rg1 && rg1.per === 1 && rg1.last === "2026-09-04" && rg1.a5 === true);
+    const rc4 = realItems.find(i => i.num === 4);
+    T("réel : corde n°000 989-001 (2026-07-06 / 2031-07-01)", rc4 && rc4.last === "2026-07-06" && rc4.lim === "2031-07-01");
+    const r10 = realItems.find(i => i.num === 10);
+    T("réel : brassières FUSCO 26-51 (2025-06-30 / 2026-10-30)", r10 && r10.last === "2025-06-30" && r10.lim === "2026-10-30");
+    const r303 = realItems.find(i => i.num === 320);
+    T("réel : TOHATSU n°1 en section correcte", r303 && r303.sec === "Moto-pompe (TOHATSU VE 1500) (FDF DIH)");
+    // ligne 277 de l'Excel réel : n° présent, matériel vide, périodicité 1 → gardée (fidèle au registre)
+    const rEmpty = realItems.filter(i => !i.mat || !i.mat.trim());
+    T("réel : fidèle au registre (277 = seule ligne sans nom, per 1)", rEmpty.length === 1 && rEmpty[0].num === 277 && rEmpty[0].per === 1 && rEmpty[0].sec === "Claie moto-pompe WAJAX-MARK-3");
+    T("réel : 4 lignes sans n° mais avec matériel", realItems.filter(i => (i.num === null || i.num === undefined) && i.mat && i.mat.trim()).length === 4);
+  }
 
   if(driveTimer) clearTimeout(driveTimer);
   console.log("\n================================");
