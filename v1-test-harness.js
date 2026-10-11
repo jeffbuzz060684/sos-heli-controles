@@ -36,6 +36,8 @@ global.document = {
   body: { appendChild(){}, removeChild(){} }
 };
 global.window = globalThis;
+global.addEventListener = global.addEventListener || function(){};
+global.removeEventListener = global.removeEventListener || function(){};
 Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true });
 global.__badge = -1;
 navigator.setAppBadge = n => { global.__badge = n; };
@@ -119,7 +121,7 @@ function resetConfirm(v){ confirmAnswer = v; }
 (async function main(){
   console.log("=== A. Chargement & invariants ===");
   T("seed chargé : 321 matériels", state.items.length === 321);
-  T("version v3", APP_VERSION === "v3");
+  T("version v3.1", APP_VERSION === "v3.1");
   T("clé storage", KEY === "sos-heli-controles-v1");
   T("sw.js : cache aligné sur la version app", swSrc.indexOf("sos-heli-controles-" + APP_VERSION) >= 0);
   T("sw.js : pas d'ancien cache", swSrc.indexOf("sos-heli-controles-v0") < 0);
