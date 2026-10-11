@@ -104,7 +104,7 @@ function resetConfirm(v){ confirmAnswer = v; }
   T("seed chargé : 321 matériels", state.items.length === 321);
   T("version v2", APP_VERSION === "v2");
   T("clé storage", KEY === "sos-heli-controles-v1");
-  T("sw.js : nom de cache v1", swSrc.indexOf("sos-heli-controles-v1") >= 0);
+  T("sw.js : cache aligné sur la version app", swSrc.indexOf("sos-heli-controles-" + APP_VERSION) >= 0);
   T("sw.js : pas d'ancien cache", swSrc.indexOf("sos-heli-controles-v0") < 0);
   T("index : manifeste lié", html.indexOf("manifest.webmanifest") >= 0);
   const manifestSrc = fs.readFileSync("manifest.webmanifest", "utf8");
