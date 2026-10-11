@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>SOS HELI — Contrôles Matériel</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#0f172a; --card:#1e293b; --card2:#243449; --line:#334155;
+  --txt:#e2e8f0; --muted:#94a3b8; --ok:#22c55e; --warn:#f97316; --bad:#ef4444; --dim:#64748b;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px}
+body{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+.wrap{max-width:640px;margin:0 auto;padding:0 12px}
+header{position:sticky;top:0;z-index:20;background:rgba(15,23,42,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:10px 0 8px}
+header .hrow{display:flex;align-items:center;gap:10px}
+header h1{font-size:17px;margin:0;flex:1;line-height:1.2}
+header h1 small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.pill{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--muted);white-space:nowrap}
+.pill.ok{color:var(--ok);border-color:#14532d}
+.pill.err{color:var(--bad);border-color:#7f1d1d}
+.pill.warn{color:var(--warn);border-color:#7c2d12}
+#stats{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.stat{flex:1;min-width:88px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;text-align:center;cursor:pointer;border-width:2px}
+.stat .n{font-size:20px;font-weight:700}
+.stat .l{font-size:11px;color:var(--muted)}
+.stat.on{border-color:#38bdf8;background:var(--card2)}
+.stat.k-retard .n{color:var(--bad)} .stat.k-prevoir .n{color:var(--warn)}
+.stat.k-ok .n{color:var(--ok)} .stat.k-hs .n{color:var(--bad)}
+.stat.k-sans .n{color:var(--dim)}
+.bar{display:flex;gap:6px;margin:8px 0;align-items:center}
+#q{flex:1;background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px 12px;font-size:16px}
+select{background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px;font-size:14px;max-width:46%}
+.sech{display:flex;align-items:center;gap:8px;margin:16px 0 6px;cursor:pointer;user-select:none}
+.sech h3{margin:0;font-size:14px;color:#7dd3fc;flex:0 1 auto}
+.sech .cnt{font-size:11px;color:var(--muted)}
+.sech .tri{margin-left:auto;font-size:12px;color:var(--dim)}
+.item{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--dim);border-radius:12px;padding:10px 12px;margin:6px 0;display:flex;gap:10px;align-items:center}
+.item.k-retard{border-left-color:var(--bad)} .item.k-prevoir{border-left-color:var(--warn)}
+.item.k-ok{border-left-color:var(--ok)} .item.k-hs{border-left-color:#7f1d1d}
+.item .txt{flex:1;min-width:0;cursor:pointer}
+.item .mat{font-size:14px;font-weight:600;overflow-wrap:break-word}
+.item .meta{font-size:12px;color:var(--muted);margin-top:2px}
+.item .jr{font-size:12px;font-weight:700;text-align:right;white-space:nowrap}
+.jr.neg{color:var(--bad)} .jr.soon{color:var(--warn)} .jr.far{color:var(--ok)}
+.btn{background:#334155;border:none;color:var(--txt);border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer}
+.btn.pri{background:#0ea5e9;font-weight:700}
+.btn.go{background:var(--ok);font-weight:700;color:#052e16}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.btn.danger{background:#7f1d1d}
+.btn.big{width:100%;padding:13px;font-size:16px}
+.chkbtn{flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:none;background:#14532d;color:#bbf7d0;font-size:19px;cursor:pointer}
+#addBtn{position:fixed;right:calc(16px + env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:#0ea5e9;color:#04202e;font-size:26px;border:none;font-weight:700;z-index:15;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+#backupCard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:18px 0}
+#backupCard .syncline{font-size:12px;color:var(--muted);margin:4px 0 10px}
+#backupCard details{margin-top:10px}
+#backupCard summary{cursor:pointer;font-size:13px;color:var(--muted)}
+label.f{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+input.f,textarea.f{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px;font-size:16px}
+.frow{display:flex;gap:8px}.frow>*{flex:1}
+#sheet{position:fixed;inset:0;background:rgba(2,6,23,.65);z-index:30;display:none}
+#sheet.open{display:block}
+#sheetBox{position:absolute;left:0;right:0;bottom:0;max-height:92dvh;overflow-y:auto;background:var(--bg);border-radius:18px 18px 0 0;border-top:1px solid var(--line);padding:14px 16px calc(18px + env(safe-area-inset-bottom))}
+#sheetBox h2{margin:0 0 4px;font-size:16px}
+#sheetBox .close{position:absolute;top:10px;right:12px}
+#preview{font-size:13px;background:var(--card);border-radius:10px;padding:8px 10px;margin:10px 0}
+.hist{font-size:12px;color:var(--muted);margin:2px 0}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));background:#0b1222;border:1px solid var(--line);color:var(--txt);padding:11px 16px;border-radius:12px;font-size:14px;z-index:50;display:none;max-width:92%;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#toast button{margin-left:10px;background:#0ea5e9;border:none;border-radius:8px;padding:5px 10px;color:#04202e;font-weight:700;font-size:13px}
+#empty{color:var(--muted);text-align:center;padding:26px 0;font-size:14px}
+.empty-sec{display:none}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="hrow">
+<h1>🚁 SOS HELI — Contrôles Matériel<small id="hSub">Registre des contrôles périodiques</small></h1>
+<span class="pill" id="drivePill">☁️ —</span>
+</div></div></header>
+<main class="wrap">
+  <div id="stats"></div>
+  <div class="bar">
+    <input id="q" type="search" placeholder="🔍 Rechercher un matériel…">
+    <select id="secSel"><option value="">Toutes sections</option></select>
+  </div>
+  <div id="list"></div>
+  <div id="backupCard"></div>
+</main>
+<button id="addBtn" onclick="openItem(null)">＋</button>
+<div id="sheet" onclick="if(event.target.id==='sheet')closeSheet()">
+  <div id="sheetBox">
+    <button class="btn ghost close" onclick="closeSheet()">✕</button>
+    <h2 id="shTitle">Matériel</h2>
+    <div id="preview"></div>
+    <label class="f">Section</label><input class="f" id="fSec" list="secList"><datalist id="secList"></datalist>
+    <label class="f">Matériel / élément *</label><input class="f" id="fMat">
+    <label class="f">Responsable</label><input class="f" id="fResp">
+    <div class="frow">
+      <div><label class="f">Périodicité (mois)</label><input class="f" id="fPer" type="number" min="1" step="1" inputmode="numeric"></div>
+      <div><label class="f">Seuil d'alerte</label><select class="f" id="fA5"><option value="">60 jours (2 mois)</option><option value="1">5 jours</option></select></div>
+    </div>
+    <div class="frow">
+      <div><label class="f">Dernier contrôle</label><input class="f" id="fLast" type="date"></div>
+      <div><label class="f">Date limite / péremption</label><input class="f" id="fLim" type="date"></div>
+    </div>
+    <label class="f"><input type="checkbox" id="fHs" style="vertical-align:middle"> 🔴 Hors service / Réformé</label>
+    <label class="f">Observation / notes</label><textarea class="f" id="fNotes" rows="2"></textarea>
+    <label class="f">Référence dossier</label><input class="f" id="fRef">
+    <div style="height:12px"></div>
+    <button class="btn go big" onclick="saveItem()">💾 Enregistrer</button>
+    <div style="height:8px"></div>
+    <button class="btn ghost big" id="delBtn" onclick="deleteItem()">🗑️ Supprimer ce matériel</button>
+    <div style="height:16px"></div>
+    <div id="ctlZone">
+      <h2 style="font-size:15px">✅ Enregistrer un contrôle</h2>
+      <label class="f">Date du contrôle</label><input class="f" id="ctlDate" type="date">
+      <label class="f">Note (optionnel)</label><input class="f" id="ctlNote">
+      <div style="height:8px"></div>
+      <button class="btn pri big" onclick="doControle()">✅ Contrôle effectué</button>
+      <div style="height:10px"></div>
+      <div id="histBox"></div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+"use strict";
+/* ================= SUIVI CONTRÔLES SOS HELI — v1 ================= */
+var APP_VERSION = "v1";
+var SW_CACHE = "sos-heli-controles-v1";
+var KEY = "sos-heli-controles-v1";
+var SEED = /*__SEED__*/[{"id":"m001","num":1,"sec":"CAPINAV","mat":"Corde lisse (Marlow) n°140 993-002","resp":"Commando Hubert","per":null,"last":null,"lim":null,"a5":false,"hs":true,"notes":"REFORME (972 descente le 24/10/2024)","ref":null,"hist":[]},{"id":"m002","num":2,"sec":"CAPINAV","mat":"Corde lisse (Marlow) n°147 101-001","resp":"Commando Hubert","per":null,"last":null,"lim":null,"a5":false,"hs":true,"notes":"REFORME (983 descente le 31/10/2024)","ref":null,"hist":[]},{"id":"m003","num":3,"sec":"CAPINAV","mat":"Corde lisse (Marlow) n°158 862-002","resp":"Commando Hubert","per":null,"last":"2026-07-06","lim":"2026-07-06","a5":false,"hs":true,"notes":"REFORME (995 descente le 06/07/2026)","ref":null,"hist":[]},{"id":"m004","num":4,"sec":"CAPINAV","mat":"Corde lisse (Marlow) n°000 989-001","resp":"Commando Hubert","per":6,"last":"2026-07-06","lim":"2031-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m005","num":5,"sec":"CAPINAV","mat":"Corde lisse (Marlow) n°000 989-002","resp":"Commando Hubert","per":6,"last":"2026-07-06","lim":"2031-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m006","num":6,"sec":"CAPINAV","mat":"Brassières SOIEN 275N du n°1 au n°40","resp":"SLM-Toulon atelier PB","per":12,"last":"2026-01-31","lim":"2036-04-01","a5":false,"hs":false,"notes":null,"ref":"BRASSIERES\\GILETS N250 ALOTECH CAPINAV\\LISTE GILET DE SAUVETAGE 275N HELI.xls","hist":[]},{"id":"m007","num":7,"sec":"CAPINAV","mat":"Brassières SOIEN 275N du n°41 au n°60","resp":"SLM-Toulon atelier PB","per":12,"last":"2026-04-30","lim":"2036-04-01","a5":false,"hs":false,"notes":null,"ref":"BRASSIERES\\GILETS N250 ALOTECH CAPINAV\\LISTE GILET DE SAUVETAGE 275N HELI.xls","hist":[]},{"id":"m008","num":8,"sec":"CAPINAV","mat":"Brassières BGFM17 FUSCO (x25) n°1 à 25","resp":"SLM-Toulon atelier PB","per":12,"last":"2026-06-30","lim":"2030-10-01","a5":false,"hs":false,"notes":null,"ref":"BRASSIERES\\GILETS FUSCO GIMAE\\LISTE GILET DE SAUVETAGE-BGFM17-SOS HELI(Récupération automatique).xls","hist":[]},{"id":"m009","num":10,"sec":"CAPINAV","mat":"Brassières BGFM17 FUSCO (x25) n°26 à 51","resp":"SLM-Toulon atelier PB","per":12,"last":"2025-06-30","lim":"2026-10-30","a5":false,"hs":false,"notes":"25 percuteurs en attente","ref":"BRASSIERES\\GILETS FUSCO GIMAE\\LISTE GILET DE SAUVETAGE-BGFM17-SOS HELI(Récupération automatique).xls","hist":[]},{"id":"m010","num":12,"sec":"CAPINAV","mat":"Tenue TYPHOON (x10)","resp":null,"per":null,"last":null,"lim":null,"a5":false,"hs":false,"notes":"nouveau complément","ref":"..\\TYPHOON\\TENUES ETANCHES TYPHOON 50.xls","hist":[]},{"id":"m011","num":13,"sec":"CAPINAV","mat":"Tenue TYPHOON (x40)","resp":null,"per":null,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":"..\\TYPHOON\\TENUES ETANCHES TYPHOON 50.xls","hist":[]},{"id":"m012","num":14,"sec":"CAPINAV","mat":"Tenue étanche X35 (prêt) SAFRAN 86o","resp":null,"per":null,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m013","num":15,"sec":"CAPINAV","mat":"Ceinturon ATTILA","resp":"SOS-SMPM","per":12,"last":"2026-01-12","lim":"2027-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m014","num":16,"sec":"CAPINAV","mat":"Arimage CL","resp":"SOS-SMPM","per":12,"last":"2026-01-12","lim":"2027-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m015","num":17,"sec":"CAPINAV","mat":"Longe Aéro d'arrimage AERONET","resp":"SOS-SMPM","per":12,"last":"2026-01-12","lim":"2034-12-25","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m016","num":18,"sec":"CAPINAV","mat":"Harnais SH7 pour largueur","resp":"SOS-SMPM","per":12,"last":"2026-01-12","lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m017","num":19,"sec":"CAPINAV","mat":"Filets SLING CAPINAV (x7)","resp":"BUREAU VERITAS","per":12,"last":"2026-01-13","lim":"2030-09-29","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m018","num":20,"sec":"CAPINAV","mat":"Nacelle de transbordement","resp":"PM MATHET","per":12,"last":"2025-12-11","lim":"2026-12-11","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m019","num":21,"sec":"CAPINAV","mat":"Groupe éléctrogéne WORMS-GYNIX(x5)","resp":"SE2M","per":12,"last":"2026-09-29","lim":"2030-04-15","a5":false,"hs":false,"notes":"batteries HS commandé","ref":null,"hist":[]},{"id":"m020","num":22,"sec":"CAPINAV","mat":"Balise-AIS sur gilet de sauvetage (x25)","resp":null,"per":12,"last":"2026-01-01","lim":"2029-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m021","num":23,"sec":"CAPINAV","mat":"Plaque Gilets pare-balle (x23)","resp":"pole national expertise balistique sur St Marthe","per":60,"last":"2025-01-07","lim":"2031-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m022","num":24,"sec":"CAPINAV","mat":"BG PRO AIR *1","resp":"AGI","per":null,"last":null,"lim":null,"a5":false,"hs":false,"notes":"PRÊT le 10/06/2026","ref":null,"hist":[]},{"id":"m023","num":25,"sec":"CAPINAV","mat":"BG4 (x14 CM GIMAé + x20 CM IBN)","resp":"AGI","per":6,"last":"2026-08-01","lim":"2027-08-02","a5":false,"hs":false,"notes":"recuperer le 04/06/2026","ref":null,"hist":[]},{"id":"m024","num":26,"sec":"CAPINAV","mat":"Explosimetre ( AGI 29) pour étalonnage","resp":"AGI","per":null,"last":null,"lim":null,"a5":false,"hs":false,"notes":"LVN","ref":null,"hist":[]},{"id":"m025","num":27,"sec":"CAPINAV","mat":"Explosimetre (AGI AGI 025) pour étalonnage","resp":"AGI","per":null,"last":null,"lim":null,"a5":false,"hs":false,"notes":"LVN","ref":null,"hist":[]},{"id":"m026","num":28,"sec":"CAPINAV","mat":"Repas CAPINAV / FxF DIH ( FROID )","resp":"LOG-VIVRES-STJ","per":null,"last":"2026-09-15","lim":"2026-10-09","a5":false,"hs":false,"notes":null,"ref":"..\\REPAS- CAPINAV-FDF\\stock repas CAPINAV-FDF.xlsx","hist":[]},{"id":"m027","num":29,"sec":"CAPINAV","mat":"Repas CAPINAV / FxF DIH ( CHAUD )","resp":"LOG-VIVRES-STJ","per":null,"last":"2026-10-01","lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":"..\\REPAS- CAPINAV-FDF\\stock repas CAPINAV-FDF.xlsx","hist":[]},{"id":"m028","num":30,"sec":"CAPINAV","mat":"Jerricane 20L x4 (fabriqué en 2022)","resp":"IATA","per":60,"last":"2022-01-01","lim":"2027-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m029","num":31,"sec":"CAPINAV","mat":"Jerricane 5L x5 (fabriqué en 2025)","resp":"IATA","per":60,"last":"2025-06-01","lim":"2030-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m030","num":32,"sec":"CAPINAV","mat":"FR 302 déclaration douane (matériel militaire)","resp":null,"per":null,"last":null,"lim":"2025-01-01","a5":false,"hs":false,"notes":"USAR","ref":null,"hist":[]},{"id":"m031","num":33,"sec":"RT / GIMAé","mat":"Masque araignée Dräger (x10)","resp":"SOS-RT","per":12,"last":"2026-08-28","lim":"2030-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m032","num":34,"sec":"RT / GIMAé","mat":"Cartouche filtrante (x10)","resp":"SOS-RT","per":120,"last":"2026-02-01","lim":"2032-02-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m033","num":35,"sec":"FDF / DIH","mat":"PARAMASQUE MICRO-K (x13)","resp":"AGI","per":12,"last":"2026-04-01","lim":"2026-10-16","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m034","num":36,"sec":"FDF / DIH","mat":"KIT feu de foret CM DIH","resp":"PHARMA","per":12,"last":"2026-06-10","lim":"2028-01-31","a5":false,"hs":false,"notes":"12917","ref":null,"hist":[]},{"id":"m035","num":37,"sec":"FDF / DIH","mat":"KIT feu de foret VR DIH","resp":"PHARMA","per":12,"last":"2026-06-11","lim":"2027-02-01","a5":false,"hs":false,"notes":"13195","ref":null,"hist":[]},{"id":"m036","num":38,"sec":"FDF / DIH","mat":"KIT feu de foret VRCG DIH","resp":"PHARMA","per":12,"last":"2026-06-12","lim":"2027-05-30","a5":false,"hs":false,"notes":"13233","ref":null,"hist":[]},{"id":"m037","num":39,"sec":"LEVAGE","mat":"matériels de levage ( x140)","resp":"BUREAU VERITAS","per":12,"last":"2026-04-10","lim":"2027-04-10","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m038","num":40,"sec":"LEVAGE","mat":"Filets \"sling\" CAPINAV (x7)","resp":"BUREAU VERITAS","per":12,"last":"2026-04-10","lim":"2027-04-10","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m039","num":41,"sec":"LEVAGE","mat":"Gerbeur 1 et 2","resp":"BUREAU VERITAS","per":6,"last":"2026-05-05","lim":"2026-11-03","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m040","num":42,"sec":"LEVAGE","mat":"Hayon (CM IBN1 et 2 )","resp":"BUREAU VERITAS","per":6,"last":"2026-05-05","lim":"2026-11-04","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m041","num":43,"sec":"LEVAGE","mat":"Grue auxiliaire CM DIH","resp":"BUREAU VERITAS","per":6,"last":"2026-11-05","lim":"2026-11-05","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m042","num":44,"sec":"VEHICULE","mat":"CM DIH ( FC-739-GY)","resp":null,"per":12,"last":"2026-06-16","lim":"2027-06-16","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m043","num":45,"sec":"VEHICULE","mat":"CIBN -1-11 ( GA-997-PS)","resp":null,"per":12,"last":"2026-02-17","lim":"2027-02-17","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m044","num":46,"sec":"VEHICULE","mat":"CIBN -1-12 ( GA-105-PT)","resp":null,"per":12,"last":"2026-03-09","lim":"2027-03-09","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m045","num":47,"sec":"VEHICULE","mat":"VTUL 1-75 (GS-928-RK )","resp":null,"per":12,"last":"2026-11-28","lim":"2027-11-28","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m046","num":48,"sec":"VEHICULE","mat":"VHR 0.13 ( FJ-859-BG )","resp":null,"per":12,"last":"2026-03-25","lim":"2027-03-25","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m047","num":49,"sec":"VEHICULE","mat":"VR 1.21 ( FR-807-XK )","resp":null,"per":12,"last":"2026-06-26","lim":"2027-06-26","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m048","num":50,"sec":"VEHICULE","mat":"Extincteur CM DIH (cabine)","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m049","num":51,"sec":"VEHICULE","mat":"Extincteur CM DIH (coffre)","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m050","num":52,"sec":"MEDICALE","mat":"Bouteille B2 : n° F32EKU8 (VR,1,21)","resp":"GSN","per":12,"last":"2026-09-14","lim":"2026-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m051","num":53,"sec":"MEDICALE","mat":"Bouteille B2 : n° F4YFM3M (sac oxy n°1)","resp":"GSN","per":12,"last":"2026-09-14","lim":"2029-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m052","num":54,"sec":"MEDICALE","mat":"Bouteille B2 : n° F22AFTM (sac oxy n°2)","resp":"GSN","per":12,"last":"2026-09-14","lim":"2028-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m053","num":55,"sec":"MEDICALE","mat":"Bouteille B2 : n° F4AE434 (sac P.S n°4)","resp":"GSN","per":12,"last":"2026-09-14","lim":"2029-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m054","num":56,"sec":"MEDICALE","mat":"\" \" B2 :n° F4YFMWE (reserve RAC LVN)","resp":"GSN","per":12,"last":"2025-09-01","lim":"2028-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m055","num":57,"sec":"MEDICALE","mat":"\" B10 : n°F4YFNNC (caisse GSAPM) CM GMAé","resp":"GSN","per":12,"last":"2026-09-14","lim":"2027-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m056","num":58,"sec":"MEDICALE","mat":"\" B10 : n°F33XUAF (caisse GSAPM) CM GMAé","resp":"GSN","per":12,"last":"2026-09-14","lim":"2027-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m057","num":59,"sec":"MEDICALE","mat":"\" B10 : n°F432PKH (caisse GSAPM) CM GMAé","resp":"GSN","per":12,"last":"2026-09-14","lim":"2027-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m058","num":60,"sec":"MEDICALE","mat":"Defibrilateur semi-automatique(x1 + x3)","resp":"GSN","per":12,"last":"2026-09-14","lim":"2027-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m059","num":61,"sec":"MEDICALE","mat":"Oxymetre de pouls PV250713-02","resp":"GSN sac N°1 gsapmer","per":12,"last":"2026-09-14","lim":"2026-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m060","num":62,"sec":"MEDICALE","mat":"Oxymetre de pouls PV181113-04","resp":"GSN sac N°2 gsapmer","per":12,"last":"2026-09-14","lim":"2026-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m061","num":63,"sec":"MEDICALE","mat":"Oxymetre de pouls PV250713-13","resp":"GSN sac N°3 gsapmer","per":12,"last":"2026-09-14","lim":"2026-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m062","num":64,"sec":"MEDICALE","mat":"Oxymetre de pouls PV250713-16","resp":"GSN - GIMAé sac OXY N°1","per":12,"last":"2026-09-14","lim":"2026-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m063","num":65,"sec":"MEDICALE","mat":"Oxymetre de pouls PV250713-18","resp":"GSN - GIMAé sac OXY N°2","per":12,"last":"2026-09-14","lim":"2026-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m064","num":66,"sec":"MEDICALE","mat":"Oxymetre de pouls PV250713-07","resp":"GSN - GIMAé sac PS N°4","per":12,"last":"2025-09-18","lim":"2026-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m065","num":67,"sec":"MEDICALE","mat":"Oxymetre de pouls NC070825-11","resp":"GSN - VRCG DIH","per":12,"last":"2026-09-14","lim":"2026-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m066","num":68,"sec":"MEDICALE","mat":"thermmotre tympanique (+x3 gsaer)","resp":"GSN","per":12,"last":null,"lim":"2023-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m067","num":null,"sec":"MEDICALE","mat":"Lots Damge contrôle 25 ( GSAP)","resp":"GSN INF","per":12,"last":"2026-09-14","lim":"2028-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m068","num":69,"sec":"MEDICALE","mat":"Lots Damge contrôle 3 ( GSAP)","resp":"GSN INF","per":12,"last":"2026-09-14","lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m069","num":70,"sec":"TIC n°1","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m070","num":71,"sec":"TIC n°1","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m071","num":72,"sec":"TIC n°1","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m072","num":73,"sec":"TIC n°1","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2028-04-26","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m073","num":74,"sec":"TIC n°1","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m074","num":75,"sec":"TIC n°2","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m075","num":76,"sec":"TIC n°2","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m076","num":77,"sec":"TIC n°2","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m077","num":78,"sec":"TIC n°2","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m078","num":79,"sec":"TIC n°2","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m079","num":80,"sec":"TIC n°3","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2028-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m080","num":81,"sec":"TIC n°3","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m081","num":82,"sec":"TIC n°3","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m082","num":83,"sec":"TIC n°3","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2028-04-26","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m083","num":84,"sec":"TIC n°3","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m084","num":85,"sec":"TIC n°4","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m085","num":86,"sec":"TIC n°4","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m086","num":87,"sec":"TIC n°4","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m087","num":88,"sec":"TIC n°4","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m088","num":89,"sec":"TIC n°4","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m089","num":90,"sec":"TIC n°5","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2028-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m090","num":91,"sec":"TIC n°5","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m091","num":92,"sec":"TIC n°5","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m092","num":93,"sec":"TIC n°5","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2028-04-26","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m093","num":94,"sec":"TIC n°5","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2029-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m094","num":95,"sec":"TIC n°6","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":"2026-09-16","lim":"2028-03-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m095","num":96,"sec":"TIC n°6","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m096","num":97,"sec":"TIC n°6","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m097","num":98,"sec":"TIC n°6","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m098","num":99,"sec":"TIC n°6","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m099","num":100,"sec":"TIC n°7","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m100","num":101,"sec":"TIC n°7","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m101","num":102,"sec":"TIC n°7","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m102","num":103,"sec":"TIC n°7","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2028-04-26","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m103","num":104,"sec":"TIC n°7","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2029-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m104","num":105,"sec":"TIC n°8","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m105","num":106,"sec":"TIC n°8","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m106","num":107,"sec":"TIC n°8","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m107","num":108,"sec":"TIC n°8","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m108","num":109,"sec":"TIC n°8","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m109","num":110,"sec":"TIC n°9","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m110","num":111,"sec":"TIC n°9","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m111","num":112,"sec":"TIC n°9","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m112","num":113,"sec":"TIC n°9","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m113","num":114,"sec":"TIC n°9","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m114","num":115,"sec":"TIC n°10","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2028-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m115","num":116,"sec":"TIC n°10","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m116","num":117,"sec":"TIC n°10","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m117","num":118,"sec":"TIC n°10","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2028-04-26","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m118","num":119,"sec":"TIC n°10","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m119","num":120,"sec":"TIC n°11","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m120","num":121,"sec":"TIC n°11","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m121","num":122,"sec":"TIC n°11","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m122","num":123,"sec":"TIC n°11","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m123","num":124,"sec":"TIC n°11","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m124","num":125,"sec":"TIC n°12","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m125","num":126,"sec":"TIC n°12","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m126","num":127,"sec":"TIC n°12","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m127","num":128,"sec":"TIC n°12","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m128","num":129,"sec":"TIC n°12","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m129","num":130,"sec":"TIC n°13","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m130","num":131,"sec":"TIC n°13","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m131","num":132,"sec":"TIC n°13","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m132","num":133,"sec":"TIC n°13","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m133","num":134,"sec":"TIC n°13","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m134","num":135,"sec":"TIC n°14","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m135","num":136,"sec":"TIC n°14","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m136","num":137,"sec":"TIC n°14","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m137","num":138,"sec":"TIC n°14","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m138","num":139,"sec":"TIC n°14","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m139","num":140,"sec":"TIC n°15","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2028-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m140","num":141,"sec":"TIC n°15","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m141","num":142,"sec":"TIC n°15","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m142","num":143,"sec":"TIC n°15","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m143","num":144,"sec":"TIC n°15","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m144","num":145,"sec":"TIC n°16","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m145","num":146,"sec":"TIC n°16","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m146","num":147,"sec":"TIC n°16","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2030-02-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m147","num":148,"sec":"TIC n°16","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2028-04-26","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m148","num":149,"sec":"TIC n°16","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m149","num":150,"sec":"TIC n°17","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m150","num":151,"sec":"TIC n°17","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m151","num":152,"sec":"TIC n°17","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m152","num":153,"sec":"TIC n°17","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m153","num":154,"sec":"TIC n°17","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2028-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m154","num":155,"sec":"TIC n°18","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m155","num":156,"sec":"TIC n°18","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m156","num":157,"sec":"TIC n°18","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m157","num":158,"sec":"TIC n°18","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m158","num":159,"sec":"TIC n°18","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m159","num":160,"sec":"TIC n°19","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m160","num":161,"sec":"TIC n°19","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m161","num":162,"sec":"TIC n°19","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m162","num":163,"sec":"TIC n°19","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m163","num":164,"sec":"TIC n°19","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m164","num":165,"sec":"TIC n°20","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m165","num":166,"sec":"TIC n°20","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m166","num":167,"sec":"TIC n°20","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m167","num":168,"sec":"TIC n°20","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m168","num":169,"sec":"TIC n°20","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m169","num":170,"sec":"TIC n°21","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2028-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m170","num":171,"sec":"TIC n°21","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2027-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m171","num":172,"sec":"TIC n°21","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m172","num":173,"sec":"TIC n°21","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2028-04-26","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m173","num":174,"sec":"TIC n°21","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2029-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m174","num":175,"sec":"TIC n°22","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m175","num":176,"sec":"TIC n°22","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m176","num":177,"sec":"TIC n°22","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m177","num":178,"sec":"TIC n°22","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2028-04-26","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m178","num":179,"sec":"TIC n°22","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m179","num":180,"sec":"TIC n°23","mat":"x2 Chlorure de sodium 0.9% 10ml","resp":null,"per":null,"last":null,"lim":"2028-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m180","num":181,"sec":"TIC n°23","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":null,"lim":"2027-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m181","num":182,"sec":"TIC n°23","mat":"x1 Pansement compressif d’urgence","resp":null,"per":null,"last":null,"lim":"2027-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m182","num":183,"sec":"TIC n°23","mat":"x1 PST QUIKCLOT COMBAT GAUZE","resp":null,"per":null,"last":null,"lim":"2028-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m183","num":184,"sec":"TIC n°23","mat":"x1 Valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2029-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m184","num":185,"sec":"SACS  P.S n°1 GIMAé","mat":"x1 ceinture pelvienne","resp":null,"per":null,"last":null,"lim":"2029-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m185","num":186,"sec":"SACS  P.S n°1 GIMAé","mat":"x1 gel hydro alcoolique","resp":null,"per":null,"last":"2026-09-16","lim":"2029-01-03","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m186","num":187,"sec":"SACS  P.S n°1 GIMAé","mat":"x3 valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m187","num":188,"sec":"SACS  P.S n°1 GIMAé","mat":"x3 champ plein opératoire","resp":null,"per":null,"last":null,"lim":"2028-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m188","num":189,"sec":"SACS  P.S n°1 GIMAé","mat":"x20 chlorure de sodium 0,9%","resp":null,"per":null,"last":null,"lim":"2027-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m189","num":190,"sec":"SACS  P.S n°1 GIMAé","mat":"x3 pansement METALINE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m190","num":191,"sec":"SACS  P.S n°1 GIMAé","mat":"x3 pansement absorbant","resp":null,"per":null,"last":null,"lim":"2027-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m191","num":192,"sec":"SACS  P.S n°1 GIMAé","mat":"x4 bande de 7 cm","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m192","num":193,"sec":"SACS  P.S n°1 GIMAé","mat":"x4 bande de 10 cm","resp":null,"per":null,"last":"2026-09-16","lim":"2029-11-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m193","num":194,"sec":"SACS  P.S n°1 GIMAé","mat":"X25 compresse stériles","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m194","num":195,"sec":"SACS  P.S n°1 GIMAé","mat":"x3 pansement COMPRESSIF D'URGNCE","resp":null,"per":null,"last":null,"lim":"2027-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m195","num":196,"sec":"SACS  P.S n°1 GIMAé","mat":"x3 pansement QUICKCLOT","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m196","num":197,"sec":"SACS  P.S n°2 GIMAé","mat":"x1 ceinture pelvienne","resp":null,"per":null,"last":null,"lim":"2029-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m197","num":198,"sec":"SACS  P.S n°2 GIMAé","mat":"x1 gel hydro alcoolique","resp":null,"per":null,"last":null,"lim":"2028-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m198","num":199,"sec":"SACS  P.S n°2 GIMAé","mat":"x3 valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m199","num":200,"sec":"SACS  P.S n°2 GIMAé","mat":"x3 champ plein opératoire","resp":null,"per":null,"last":null,"lim":"2028-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m200","num":201,"sec":"SACS  P.S n°2 GIMAé","mat":"x20 chlorure de sodium 0,9%","resp":null,"per":null,"last":null,"lim":"2027-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m201","num":202,"sec":"SACS  P.S n°2 GIMAé","mat":"x3 pansement METALINE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m202","num":203,"sec":"SACS  P.S n°2 GIMAé","mat":"x3 pansement absorbant","resp":null,"per":null,"last":null,"lim":"2027-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m203","num":204,"sec":"SACS  P.S n°2 GIMAé","mat":"x4 bande de 7 cm","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m204","num":205,"sec":"SACS  P.S n°2 GIMAé","mat":"x4 bande de 10 cm","resp":null,"per":null,"last":"2026-09-16","lim":"2029-11-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m205","num":206,"sec":"SACS  P.S n°2 GIMAé","mat":"X25 compresse stériles","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m206","num":207,"sec":"SACS  P.S n°2 GIMAé","mat":"x3 pansement COMPRESSIF D'URGNCE","resp":null,"per":null,"last":null,"lim":"2030-02-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m207","num":208,"sec":"SACS  P.S n°2 GIMAé","mat":"x3 pansement QUICKCLOT","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m208","num":209,"sec":"SACS  P.S n°3 GIMAé","mat":"x1 ceinture pelvienne","resp":null,"per":null,"last":null,"lim":"2030-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m209","num":210,"sec":"SACS  P.S n°3 GIMAé","mat":"x1 gel hydro alcoolique","resp":null,"per":null,"last":null,"lim":"2028-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m210","num":211,"sec":"SACS  P.S n°3 GIMAé","mat":"x3 valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2028-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m211","num":212,"sec":"SACS  P.S n°3 GIMAé","mat":"x3 champ plein opératoire","resp":null,"per":null,"last":null,"lim":"2028-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m212","num":213,"sec":"SACS  P.S n°3 GIMAé","mat":"x20 chlorure de sodium 0,9%","resp":null,"per":null,"last":null,"lim":"2027-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m213","num":214,"sec":"SACS  P.S n°3 GIMAé","mat":"x3 pansement METALINE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m214","num":215,"sec":"SACS  P.S n°3 GIMAé","mat":"x3 pansement absorbant","resp":null,"per":null,"last":null,"lim":"2027-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m215","num":216,"sec":"SACS  P.S n°3 GIMAé","mat":"x4 bande de 7 cm","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m216","num":217,"sec":"SACS  P.S n°3 GIMAé","mat":"x4 bande de 10 cm","resp":null,"per":null,"last":"2026-09-16","lim":"2029-11-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m217","num":218,"sec":"SACS  P.S n°3 GIMAé","mat":"X25 compresse stériles","resp":null,"per":null,"last":"2026-09-16","lim":"2029-11-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m218","num":219,"sec":"SACS  P.S n°3 GIMAé","mat":"x3 pansement COMPRESSIF D'URGNCE","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m219","num":220,"sec":"SACS  P.S n°3 GIMAé","mat":"x3 pansement QUICKCLOT","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m220","num":221,"sec":"SACS  P.S n°4 GIMAé","mat":"x1 ceinture pelvienne","resp":null,"per":null,"last":null,"lim":"2029-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m221","num":222,"sec":"SACS  P.S n°4 GIMAé","mat":"x1 gel hydro alcoolique","resp":null,"per":null,"last":null,"lim":"2028-09-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m222","num":223,"sec":"SACS  P.S n°4 GIMAé","mat":"x3 valve ASHERMAN","resp":null,"per":null,"last":null,"lim":"2028-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m223","num":224,"sec":"SACS  P.S n°4 GIMAé","mat":"x3 champ plein opératoire","resp":null,"per":null,"last":null,"lim":"2028-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m224","num":225,"sec":"SACS  P.S n°4 GIMAé","mat":"x20 chlorure de sodium 0,9%","resp":null,"per":null,"last":null,"lim":"2027-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m225","num":226,"sec":"SACS  P.S n°4 GIMAé","mat":"x3 pansement METALINE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m226","num":227,"sec":"SACS  P.S n°4 GIMAé","mat":"x3 pansement absorbant","resp":null,"per":null,"last":null,"lim":"2027-05-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m227","num":228,"sec":"SACS  P.S n°4 GIMAé","mat":"x4 bande de 7 cm","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m228","num":229,"sec":"SACS  P.S n°4 GIMAé","mat":"x4 bande de 10 cm","resp":null,"per":null,"last":"2026-09-16","lim":"2029-11-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m229","num":230,"sec":"SACS  P.S n°4 GIMAé","mat":"X25 compresse stériles","resp":null,"per":null,"last":null,"lim":"2029-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m230","num":231,"sec":"SACS  P.S n°4 GIMAé","mat":"x3 pansement COMPRESSIF D'URGNCE","resp":null,"per":null,"last":null,"lim":"2033-10-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m231","num":232,"sec":"SACS  P.S n°4 GIMAé","mat":"x3 pansement QUICKCLOT","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m232","num":233,"sec":"SACS  P.S n°4 GIMAé","mat":"x1 canule de Guédel T2","resp":null,"per":null,"last":null,"lim":"2029-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m233","num":234,"sec":"SACS  P.S n°4 GIMAé","mat":"x1 canule de Guédel T3","resp":null,"per":null,"last":"2026-09-16","lim":"2028-08-28","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m234","num":235,"sec":"SACS  P.S n°4 GIMAé","mat":"x1 canule de Guédel T4","resp":null,"per":null,"last":"2026-09-16","lim":"2028-08-28","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m235","num":236,"sec":"SACS  P.S n°4 GIMAé","mat":"x2 MHC ADULTE","resp":null,"per":null,"last":null,"lim":"2027-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m236","num":237,"sec":"SACS  P.S n°4 GIMAé","mat":"x1 MHC ENFANT","resp":null,"per":null,"last":"2026-09-16","lim":"2028-12-05","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m237","num":238,"sec":"SACS  P.S n°4 GIMAé","mat":"x1 connecteur biconique O2","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m238","num":239,"sec":"SACS  P.S n°4 GIMAé","mat":"x2 filtre bactériostatique","resp":null,"per":null,"last":"2026-09-16","lim":"2030-11-21","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m239","num":240,"sec":"SACS  OXY n°1","mat":"x1 canule de Guédel T2","resp":null,"per":null,"last":null,"lim":"2027-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m240","num":241,"sec":"SACS  OXY n°1","mat":"x1 canule de Guédel T3","resp":null,"per":null,"last":null,"lim":"2028-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m241","num":242,"sec":"SACS  OXY n°1","mat":"x1 canule de Guédel T4","resp":null,"per":null,"last":null,"lim":"2029-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m242","num":243,"sec":"SACS  OXY n°1","mat":"x2 MHC ADULTE","resp":null,"per":null,"last":"2026-09-16","lim":"2030-06-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m243","num":244,"sec":"SACS  OXY n°1","mat":"x1 MHC ENFANT","resp":null,"per":null,"last":null,"lim":"2028-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m244","num":245,"sec":"SACS  OXY n°1","mat":"x1 connecteur biconique O2","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m245","num":246,"sec":"SACS  OXY n°1","mat":"x2 filtre bactériostatique","resp":null,"per":null,"last":null,"lim":"2027-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m246","num":247,"sec":"SACS  OXY n°2","mat":"x1 canule de Guédel T2","resp":null,"per":null,"last":"2026-09-16","lim":"2028-08-28","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m247","num":248,"sec":"SACS  OXY n°2","mat":"x1 canule de Guédel T3","resp":null,"per":null,"last":null,"lim":"2028-05-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m248","num":249,"sec":"SACS  OXY n°2","mat":"x1 canule de Guédel T4","resp":null,"per":null,"last":"2026-09-16","lim":"2028-08-28","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m249","num":250,"sec":"SACS  OXY n°2","mat":"x2 MHC ADULTE","resp":null,"per":null,"last":null,"lim":"2027-07-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m250","num":251,"sec":"SACS  OXY n°2","mat":"x1 MHC ENFANT","resp":null,"per":null,"last":null,"lim":"2028-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m251","num":252,"sec":"SACS  OXY n°2","mat":"x1 connecteur biconique O2","resp":null,"per":null,"last":null,"lim":"2027-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m252","num":253,"sec":"SACS  OXY n°2","mat":"x2 filtre bactériostatique","resp":null,"per":null,"last":null,"lim":"2030-02-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m253","num":254,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x2 sonde d'aspiration n°26","resp":null,"per":null,"last":null,"lim":"2029-05-10","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m254","num":255,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x2 sonde d'aspiration n°10","resp":null,"per":null,"last":null,"lim":"2028-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m255","num":256,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x2 filtre bactériostatique","resp":null,"per":null,"last":"2026-09-16","lim":"2030-11-21","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m256","num":257,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x2 MHC ADULTE","resp":null,"per":null,"last":"2026-09-16","lim":"2030-06-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m257","num":258,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x2 connecteur biconique O2","resp":null,"per":null,"last":"2026-09-16","lim":"2030-08-28","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m258","num":259,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x1 canule de Guédel T1","resp":null,"per":null,"last":null,"lim":"2028-11-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m259","num":260,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x1 canule de Guédel T2","resp":null,"per":null,"last":"2026-09-16","lim":"2028-08-28","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m260","num":261,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x1 canule de Guédel T3","resp":null,"per":null,"last":null,"lim":"2028-06-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m261","num":262,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x1 canule de Guédel T4","resp":null,"per":null,"last":null,"lim":"2029-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m262","num":263,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x1 pansement METALINE","resp":null,"per":null,"last":null,"lim":"2026-12-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m263","num":264,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x8 chlorure de sodium 0,9%","resp":null,"per":null,"last":null,"lim":"2027-04-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m264","num":265,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x1 patchs électrodes DSA","resp":null,"per":null,"last":null,"lim":"2027-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m265","num":266,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x1 batterie DSA","resp":null,"per":null,"last":null,"lim":"2030-03-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m266","num":267,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x2 sachet de 5 Compresse STE NTIS 7.5x7.5","resp":null,"per":null,"last":"2026-09-16","lim":"2029-11-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m267","num":268,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x4 bande de 7 cm","resp":null,"per":null,"last":null,"lim":"2028-02-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m268","num":269,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x4 bande de 10 cm","resp":null,"per":null,"last":"2026-09-16","lim":"2029-11-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m269","num":270,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x1 bavu reutilisable","resp":null,"per":null,"last":null,"lim":"2027-05-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m270","num":271,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x2 brule stop","resp":null,"per":null,"last":null,"lim":"2028-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m271","num":272,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x2 pansement compressif d'urgence","resp":null,"per":null,"last":null,"lim":"2033-01-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m272","num":273,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x2 pansement compressif","resp":null,"per":null,"last":null,"lim":"2030-05-01","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m273","num":274,"sec":"SACS  P.S  DIH (VRCG DIH)","mat":"x2 champs opératoire","resp":null,"per":null,"last":"2026-09-16","lim":"2030-09-30","a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m274","num":275,"sec":"Claie moto-pompe WAJAX-MARK-3","mat":"AGI 7","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m275","num":276,"sec":"Claie moto-pompe WAJAX-MARK-3","mat":"AGI 15","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m276","num":null,"sec":"Claie moto-pompe WAJAX-MARK-3","mat":"AGI 7","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m277","num":277,"sec":"Claie moto-pompe WAJAX-MARK-3","mat":"","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m278","num":278,"sec":"Claie moto-pompe HALE","mat":"AGI 2","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m279","num":279,"sec":"Claie moto-pompe HALE","mat":"AGI 09","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m280","num":280,"sec":"Claie moto-pompe HALE","mat":"AGI 1","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m281","num":281,"sec":"Claie moto-pompe HALE","mat":"AGI 34","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m282","num":282,"sec":"Claie moto-pompe HALE","mat":"AGI 1.21","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m283","num":283,"sec":"Moto-pompe flottante HALE","mat":"n°1","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":true,"notes":"H.S","ref":null,"hist":[]},{"id":"m284","num":284,"sec":"Moto-pompe flottante HALE","mat":"n°2","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":true,"notes":"H.S","ref":null,"hist":[]},{"id":"m285","num":286,"sec":"Tronçonneuse","mat":"n°1 STIHL guide 45","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":"AGI 1.18","ref":null,"hist":[]},{"id":"m286","num":287,"sec":"Tronçonneuse","mat":"n°2 STIHL guide 40","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":"AGI 2.18","ref":null,"hist":[]},{"id":"m287","num":288,"sec":"Tronçonneuse","mat":"n°3 STIHL guide 55","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":"AGI 12","ref":null,"hist":[]},{"id":"m288","num":null,"sec":"Tronçonneuse électrique","mat":"STIHL msa 200c guide 33","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m289","num":null,"sec":"Tronçonneuse électrique","mat":"STIHL msa 200c guide 34","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m290","num":289,"sec":"Tronçonneuse électrique","mat":"STIHL msa 200c guide 35","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m291","num":290,"sec":"Débroussailleuse","mat":"n°2 STIHL","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m292","num":291,"sec":"Débroussailleuse","mat":"1 en reparation AGI","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m293","num":292,"sec":"Groupe électrogène WORMS (CAPINAV)","mat":"2016 BMPM GE 1","resp":null,"per":1,"last":"2026-09-04","lim":null,"a5":true,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m294","num":293,"sec":"Groupe électrogène WORMS (CAPINAV)","mat":"2016 BMPM GE 2","resp":null,"per":1,"last":"2026-09-04","lim":null,"a5":true,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m295","num":294,"sec":"Groupe électrogène WORMS (CAPINAV)","mat":"2016 BMPM GE 3","resp":null,"per":1,"last":"2026-09-04","lim":null,"a5":true,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m296","num":295,"sec":"Groupe électrogène WORMS (CAPINAV)","mat":"2016 BMPM GE 4","resp":null,"per":1,"last":"2026-09-04","lim":null,"a5":true,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m297","num":296,"sec":"Groupe électrogène WORMS (CAPINAV)","mat":"2016 BMPM GE 5","resp":null,"per":1,"last":"2026-09-04","lim":null,"a5":true,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m298","num":297,"sec":"Groupe électrogène sur claie GENYX","mat":"N°1","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m299","num":298,"sec":"Groupe électrogène sur claie GENYX","mat":"N°2","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m300","num":299,"sec":"Groupe électrogène sur claie GENYX","mat":"N°3","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m301","num":300,"sec":"Groupe électrogène sur claie GENYX","mat":"N°4","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m302","num":320,"sec":"Moto-pompe (TOHATSU VE 1500) (FDF DIH)","mat":"n°1","resp":null,"per":1,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m303","num":301,"sec":"Ventilateur électrique RAMFAN (CAPINAV)","mat":"n°1","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m304","num":302,"sec":"Ventilateur électrique RAMFAN (CAPINAV)","mat":"n°2","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m305","num":303,"sec":"Ventilateur électrique RAMFAN (CAPINAV)","mat":"n°3","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":true,"notes":"H.S AGI","ref":null,"hist":[]},{"id":"m306","num":304,"sec":"Ventilateur électrique RAMFAN (CAPINAV)","mat":"n°4","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m307","num":305,"sec":"Ventilateur électrique RAMFAN (CAPINAV)","mat":"n°5","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m308","num":306,"sec":"Ventilateur électrique RAMFAN (CAPINAV)","mat":"n°6","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m309","num":307,"sec":"Ventilateur électrique RAMFAN (CAPINAV)","mat":"n°7","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m310","num":308,"sec":"Ventilateur électrique RAMFAN (CAPINAV)","mat":"n°8","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m311","num":309,"sec":"Ventilateur hydraulique RAMFAN WH20 (Hurricane) (CAPINAV)","mat":"n°1","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m312","num":310,"sec":"Ventilateur sur batterie BATFAN (CAPINAV)","mat":"n°1","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m313","num":311,"sec":"Ventilateur sur batterie BATFAN (CAPINAV)","mat":"n°2","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m314","num":312,"sec":"Ventilateur sur batterie BATFAN (CAPINAV)","mat":"n°3","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m315","num":313,"sec":"Turbex","mat":"35 49 74","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m316","num":314,"sec":"Turbo pompe","mat":"428157","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m317","num":315,"sec":"Turbo pompe","mat":"475713","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m318","num":316,"sec":"Electro pompe","mat":"2016 BMPM PE 7","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m319","num":317,"sec":"Electro pompe","mat":"2016 BMPM PE 1","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m320","num":318,"sec":"Pompe thermique d'épuisement (TSURUMI PUMP)","mat":"n°1 (honda GX160)","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]},{"id":"m321","num":319,"sec":"Pompe thermique d'épuisement (TSURUMI PUMP)","mat":"n°2 (honda GX160)","resp":null,"per":12,"last":null,"lim":null,"a5":false,"hs":false,"notes":null,"ref":null,"hist":[]}];
+
+/* ---------------- état ---------------- */
+var state = null;
+function defaultState(){
+  return { v:1, items:JSON.parse(JSON.stringify(SEED)), tombs:{},
+    cfg:{ collapsed:{}, statFilter:"all", secFilter:"", q:"", driveAuto:true,
+          dCid:"", dSecret:"", dRefresh:"", dFolder:"taffbmpm" },
+    driveSyncedAt:0 };
+}
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(raw){ state = JSON.parse(raw); if(!state || !Array.isArray(state.items)) throw 0; }
+    else { state = defaultState(); persist(); }
+  }catch(e){ state = defaultState(); persist(); }
+  if(!state.cfg) state.cfg = defaultState().cfg;
+  if(!state.tombs) state.tombs = {};
+  primeShadow();
+}
+
+/* ---------------- dates ---------------- */
+function today(){
+  var d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function addMonthsISO(iso, m){
+  var p = iso.split("-"); var y = +p[0], mo = +p[1], da = +p[2];
+  var t = (y*12 + (mo-1)) + m; var ny = Math.floor(t/12), nm = (t%12)+1;
+  var last = new Date(ny, nm, 0).getDate();
+  return ny + "-" + String(nm).padStart(2,"0") + "-" + String(Math.min(da,last)).padStart(2,"0");
+}
+function daysTo(iso){ return Math.round((Date.parse(iso) - Date.parse(today()))/86400000); }
+function fmtDate(iso){
+  if(!iso) return "—";
+  var m = {1:"janv",2:"févr",3:"mars",4:"avr",5:"mai",6:"juin",7:"juil",8:"août",9:"sept",10:"oct",11:"nov",12:"déc"};
+  var p = iso.split("-");
+  return (+p[2]) + " " + m[+p[1]] + " " + p[0];
+}
+
+/* ---------------- calcul (formules du registre Excel) ---------------- */
+function nextOf(it){
+  if(it.last && it.per){
+    var n = addMonthsISO(it.last, it.per);
+    if(it.lim && n > it.lim) return { d:it.lim, capped:true };
+    return { d:n, capped:false };
+  }
+  if(it.lim) return { d:it.lim, capped:false };
+  return { d:null, capped:false };
+}
+var STATUTS = {
+  retard:{ e:"🔴", label:"En retard" },
+  prevoir:{ e:"🟠", label:"À prévoir" },
+  ok:{ e:"🟢", label:"OK" },
+  hs:{ e:"🔴", label:"Hors service / Réformé" },
+  reviser:{ e:"🟠", label:"À réviser" },
+  sans:{ e:"⚪", label:"Sans échéance connue" }
+};
+function isHs(it){ return !!it.hs || /REFORME|H\.S/i.test(it.notes || ""); }
+function statutOf(it){
+  if(isHs(it)) return "hs";
+  var n = nextOf(it).d;
+  if(n){
+    var d = daysTo(n);
+    if(d < 0) return "retard";
+    if(d <= (it.a5 ? 5 : 60)) return "prevoir";
+    return "ok";
+  }
+  var nb = (it.notes || "").trim().toUpperCase();
+  if(nb === "A REVISER") return "reviser";
+  if(nb === "OK") return "ok";
+  return "sans";
+}
+function jrHtml(it){
+  var n = nextOf(it).d; if(!n) return "";
+  var d = daysTo(n);
+  var cls = d < 0 ? "neg" : (d <= (it.a5?5:60) ? "soon" : "far");
+  var t = d < 0 ? ("🔴 " + (-d) + " j de retard") : (d === 0 ? "⏰ aujourd'hui" : "J–" + d);
+  return '<div class="jr ' + cls + '">' + t + '<div style="font-weight:400;font-size:10px;color:var(--muted)">' + fmtDate(n) + '</div></div>';
+}
+
+/* ---------------- persistance + fusion ---------------- */
+var _shadow = {};
+function sig(it){ return JSON.stringify([it.sec,it.mat,it.resp,it.per,it.last,it.lim,!!it.a5,isHs(it),it.notes||"",it.ref||"",JSON.stringify(it.hist||[])]); }
+function primeShadow(){ _shadow = {}; state.items.forEach(function(it){ _shadow[it.id] = sig(it); }); }
+function stampUpdates(){ state.items.forEach(function(it){ if(_shadow[it.id] !== sig(it)) it.u = Date.now(); }); }
+function persist(){
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch(e){ toast("⚠️ Stockage plein — fais un export fichier immédiatement"); }
+}
+var _dirty = false, _saveSeq = 0, driveTimer = null, driveSending = false, driveSendingAt = 0;
+function save(){
+  stampUpdates(); primeShadow(); persist();
+  _dirty = true; _saveSeq++;
+  if(state.cfg.driveAuto) scheduleDriveBackup();
+}
+function scheduleDriveBackup(){
+  if(driveTimer) clearTimeout(driveTimer);
+  driveTimer = setTimeout(function(){ driveTimer = null; driveSend(); }, 30000);
+}
+function pruneTombs(){
+  var cutoff = Date.now() - 180*86400000;
+  Object.keys(state.tombs).forEach(function(id){ if(state.tombs[id] < cutoff) delete state.tombs[id]; });
+}
+function mergeRemote(remote){
+  var added=0, changed=0, removed=0;
+  if(!remote || !Array.isArray(remote.items)) return { added:0, changed:0, removed:0 };
+  var byId = {}; state.items.forEach(function(it){ byId[it.id] = it; });
+  remote.items.forEach(function(rit){
+    var lit = byId[rit.id];
+    if(!lit){ if(!state.tombs[rit.id] || (rit.u||0) > state.tombs[rit.id]){ state.items.push(rit); added++; } return; }
+    if((rit.u||0) > (lit.u||0)){ lit.sec=rit.sec; lit.mat=rit.mat; lit.resp=rit.resp; lit.per=rit.per; lit.last=rit.last; lit.lim=rit.lim; lit.a5=rit.a5; lit.hs=rit.hs; lit.notes=rit.notes; lit.ref=rit.ref; lit.hist=rit.hist||[]; lit.u=rit.u; changed++; }
+  });
+  var rtombs = remote.tombs || {};
+  state.items = state.items.filter(function(it){
+    if(rtombs[it.id] && rtombs[it.id] > (it.u||0)){ removed++; return false; }
+    return true;
+  });
+  Object.keys(rtombs).forEach(function(id){ if(rtombs[id] > (state.tombs[id]||0)) state.tombs[id] = rtombs[id]; });
+  pruneTombs();
+  return { added:added, changed:changed, removed:removed };
+}
+
+/* ---------------- rendu ---------------- */
+var els = {};
+function E(id){ var e = document.getElementById(id); return e; }
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function escAttr(s){ return esc(s).replace(/'/g,"&#39;"); }
+function sections(){
+  var seen = {}, out = [];
+  state.items.forEach(function(it){ if(!seen[it.sec]){ seen[it.sec]=1; out.push(it.sec); } });
+  return out;
+}
+function visibleItems(){
+  var f = state.cfg.statFilter, sf = state.cfg.secFilter, q = (state.cfg.q||"").toLowerCase();
+  return state.items.filter(function(it){
+    if(f !== "all"){
+      var k = statutOf(it);
+      if(f === "prevoir" && k !== "prevoir" && k !== "reviser") return false;
+      if(f !== "prevoir" && k !== f) return false;
+    }
+    if(sf && it.sec !== sf) return false;
+    if(q && (it.mat||"").toLowerCase().indexOf(q) < 0 && (it.notes||"").toLowerCase().indexOf(q) < 0 && (it.resp||"").toLowerCase().indexOf(q) < 0 && (it.sec||"").toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+}
+function renderStats(){
+  var counts = { retard:0, prevoir:0, ok:0, hs:0, sans:0 };
+  state.items.forEach(function(it){
+    var k = statutOf(it);
+    if(k === "reviser") counts.prevoir++; else counts[k] = (counts[k]||0)+1;
+  });
+  var defs = [
+    ["retard","🔴","En retard"],
+    ["prevoir","🟠","À prévoir"],
+    ["ok","🟢","OK"],
+    ["hs","⛔","Hors service"],
+    ["sans","⚪","Sans échéance"]
+  ];
+  var f = state.cfg.statFilter;
+  E("stats").innerHTML = defs.map(function(d){
+    return '<div class="stat k-' + d[0] + (f===d[0]?" on":"") + '" onclick="setStatFilter(\'' + d[0] + '\')">'
+      + '<div class="n">' + d[1] + " " + counts[d[0]] + '</div><div class="l">' + d[2] + '</div></div>';
+  }).join("");
+  E("hSub").textContent = state.items.length + " matériels · registre actualisé en direct";
+}
+function setStatFilter(k){ state.cfg.statFilter = (state.cfg.statFilter === k) ? "all" : k; persist(); renderAll(); }
+function renderSecSel(){
+  var sel = E("secSel");
+  var cur = state.cfg.secFilter;
+  sel.innerHTML = '<option value="">Toutes sections</option>' + sections().map(function(s){
+    return '<option value="' + escAttr(s) + '"' + (s===cur?" selected":"") + '>' + esc(s) + '</option>';
+  }).join("");
+  E("secList").innerHTML = sections().map(function(s){ return '<option value="' + escAttr(s) + '">'; }).join("");
+}
+function renderList(){
+  var items = visibleItems();
+  var groups = {}, order = [];
+  items.forEach(function(it){ if(!groups[it.sec]){ groups[it.sec] = []; order.push(it.sec); } groups[it.sec].push(it); });
+  var h = [];
+  if(!items.length) h.push('<div id="empty">Aucun matériel ne correspond</div>');
+  order.forEach(function(sec){
+    var col = !!state.cfg.collapsed[sec];
+    var g = groups[sec];
+    var nb = { retard:0, prevoir:0, ok:0, hs:0, sans:0 };
+    g.forEach(function(it){ var k = statutOf(it); if(k==="reviser") nb.prevoir++; else nb[k]++; });
+    h.push('<div class="sech" onclick="toggleSec(\'' + escAttr(sec) + '\')"><h3>' + esc(sec) + '</h3>'
+      + '<span class="cnt">' + g.length + ' mat. · 🔴' + nb.retard + ' 🟠' + nb.prevoir + ' 🟢' + nb.ok + '</span>'
+      + '<span class="tri">' + (col?"▸":"▾") + '</span></div>');
+    if(!col) g.forEach(function(it){
+      var k = statutOf(it);
+      h.push('<div class="item k-' + k + '">'
+        + '<div class="txt" onclick="openItem(\'' + it.id + '\')">'
+        + '<div class="mat">' + STATUTS[k].e + " " + esc(it.mat || "(sans nom)") + '</div>'
+        + '<div class="meta">' + (it.per ? "⏱ " + it.per + " mois" : "") 
+          + (it.last ? (it.per ? " · " : "") + "✔ " + fmtDate(it.last) : "")
+          + (it.resp ? " · 👤 " + esc(it.resp) : "")
+          + (it.notes ? " · 📝 " + esc(it.notes) : "") + '</div></div>'
+        + jrHtml(it)
+        + (isHs(it) ? "" : '<button class="chkbtn" onclick="quickCheck(\'' + it.id + '\')" title="Contrôle fait aujourd\'hui">✔</button>')
+        + '</div>');
+    });
+  });
+  E("list").innerHTML = h.join("");
+}
+function toggleSec(sec){
+  state.cfg.collapsed[sec] = !state.cfg.collapsed[sec];
+  persist(); renderList();
+}
+function renderBackupCard(){
+  var cfgOk = state.cfg.dCid && state.cfg.dRefresh;
+  var ago = state.driveSyncedAt ? "il y a " + agoTxt(state.driveSyncedAt) : "jamais";
+  E("backupCard").innerHTML =
+    '<b>☁️ Sauvegarde Google Drive</b>'
+    + '<div class="syncline">' + (cfgOk ? "Dossier « " + esc(state.cfg.dFolder||"taffbmpm") + " » · dernière sauvegarde : " + ago : "Non configurée — données uniquement sur cet appareil") + '</div>'
+    + '<button class="btn pri" onclick="driveSend(true)">☁️ ' + (cfgOk ? "Sauvegarder maintenant" : "Configurer et sauvegarder") + '</button>'
+    + '<details><summary>⚙️ Options (Drive, export, restauration)</summary>'
+    + '<label class="f">Client ID Google</label><input class="f" id="dCid" value="' + escAttr(state.cfg.dCid) + '">'
+    + '<label class="f">Client Secret (optionnel)</label><input class="f" id="dSecret" value="' + escAttr(state.cfg.dSecret) + '">'
+    + '<label class="f">Refresh Token (drive.file — OAuth Playground)</label><input class="f" id="dRefresh" value="' + escAttr(state.cfg.dRefresh) + '">'
+    + '<label class="f">Nom du dossier Drive</label><input class="f" id="dFolder" value="' + escAttr(state.cfg.dFolder||"taffbmpm") + '">'
+    + '<div style="height:8px"></div>'
+    + '<button class="btn" onclick="saveDriveCfg()">💾 Enregistrer la config</button> '
+    + '<button class="btn ghost" onclick="driveDisconnect()">Déconnecter</button>'
+    + '<div style="height:8px"></div>'
+    + '<button class="btn" onclick="driveRestore()">⬇️ Restaurer depuis Drive</button> '
+    + '<button class="btn" onclick="exportFile()">📤 Exporter (JSON)</button> '
+    + '<button class="btn" onclick="exportCsv()">📄 Exporter CSV (Excel)</button>'
+    + '<label class="f" style="margin-top:10px"><input type="checkbox" id="dAuto"' + (state.cfg.driveAuto?" checked":"") + ' onchange="toggleAuto()"> Sauvegarde automatique (30 s après chaque modification)</label>'
+    + '<div class="syncline">Import fichier : <input type="file" id="impFile" accept=".json,application/json" style="font-size:12px"></div>'
+    + '</details>';
+  E("impFile").addEventListener("change", importFile);
+  renderPill();
+}
+function agoTxt(ts){
+  var m = Math.round((Date.now()-ts)/60000);
+  if(m < 1) return "à l'instant";
+  if(m < 60) return m + " min";
+  return Math.round(m/60) + " h";
+}
+function renderPill(){
+  var p = E("drivePill");
+  if(!(state.cfg.dCid && state.cfg.dRefresh)){ p.className = "pill"; p.textContent = "📴 local"; return; }
+  p.className = "pill " + (state.driveSyncedAt ? "ok" : "warn");
+  p.textContent = _dirty ? "☁️ à envoyer" : "☁️ à jour";
+}
+function renderAll(){ renderStats(); renderSecSel(); renderList(); renderBackupCard(); if(openId) refreshPreview(); }
+
+/* ---------------- toast + annuler ---------------- */
+var toastTimer = null;
+function toast(msg, action, fn){
+  var t = E("toast");
+  t.innerHTML = esc(msg) + (action ? '<button onclick="_toastAction()">' + esc(action) + "</button>" : "");
+  t.style.display = "block";
+  window._toastAction = fn ? function(){ t.style.display = "none"; fn(); } : null;
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.style.display = "none"; }, action ? 6000 : 3200);
+}
+var _undo = null;
+function undoLast(){
+  if(!_undo) return;
+  if(_undo.type === "check"){
+    var it = getIt(_undo.id);
+    if(it){ it.last = _undo.last; it.hist = _undo.hist; save(); }
+  } else if(_undo.type === "del"){
+    delete state.tombs[_undo.item.id];
+    state.items.push(_undo.item); save();
+  }
+  _undo = null; renderAll();
+}
+
+/* ---------------- item sheet ---------------- */
+var openId = null;
+function getIt(id){ for(var i=0;i<state.items.length;i++) if(state.items[i].id===id) return state.items[i]; return null; }
+function uid(){ return "u" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function openItem(id){
+  openId = id;
+  var it = id ? getIt(id) : null;
+  E("shTitle").textContent = it ? (it.mat || "Matériel") : "➕ Nouveau matériel";
+  E("fSec").value = it ? (it.sec||"") : (state.cfg.secFilter || sections()[0] || "");
+  E("fMat").value = it ? (it.mat||"") : "";
+  E("fResp").value = it ? (it.resp||"") : "";
+  E("fPer").value = it && it.per ? it.per : "";
+  E("fA5").value = it && it.a5 ? "1" : "";
+  E("fLast").value = it ? (it.last||"") : "";
+  E("fLim").value = it ? (it.lim||"") : "";
+  E("fHs").checked = it ? isHs(it) : false;
+  E("fNotes").value = it ? (it.notes||"") : "";
+  E("fRef").value = it ? (it.ref||"") : "";
+  E("delBtn").style.display = it ? "block" : "none";
+  E("ctlZone").style.display = it ? "block" : "none";
+  E("ctlDate").value = today();
+  E("ctlNote").value = "";
+  renderHist(it);
+  refreshPreview();
+  E("sheet").classList.add("open");
+}
+function closeSheet(){ E("sheet").classList.remove("open"); openId = null; }
+function readForm(){
+  return {
+    sec: E("fSec").value.trim() || "(sans section)",
+    mat: E("fMat").value.trim(),
+    resp: E("fResp").value.trim() || null,
+    per: E("fPer").value ? Math.max(1, Math.round(+E("fPer").value)) : null,
+    last: E("fLast").value || null,
+    lim: E("fLim").value || null,
+    a5: !!E("fA5").value,
+    hs: E("fHs").checked,
+    notes: E("fNotes").value.trim() || null,
+    ref: E("fRef").value.trim() || null
+  };
+}
+function refreshPreview(){
+  var f = readForm();
+  var probe = { id:openId||"probe", sec:f.sec, mat:f.mat, resp:f.resp, per:f.per, last:f.last, lim:f.lim, a5:f.a5, hs:f.hs, notes:f.notes, ref:f.ref, hist:[] };
+  var k = statutOf(probe), n = nextOf(probe);
+  E("preview").innerHTML = STATUTS[k].e + " <b>" + STATUTS[k].label + "</b>"
+    + (n.d ? " · prochain contrôle : <b>" + fmtDate(n.d) + "</b>" + (n.capped ? " (plafonné à la date limite)" : "") + " · " + (daysTo(n.d) < 0 ? "🔴 " + (-daysTo(n.d)) + " j de retard" : "J–" + daysTo(n.d)) : " · aucune échéance calculable");
+}
+function saveItem(){
+  var f = readForm();
+  if(!f.mat){ toast("⚠️ Le nom du matériel est obligatoire"); return; }
+  if(f.last && f.lim && f.lim < f.last){ toast("⚠️ La date limite est avant le dernier contrôle"); return; }
+  if(openId){
+    var it = getIt(openId);
+    if(!it){ closeSheet(); return; }
+    it.sec=f.sec; it.mat=f.mat; it.resp=f.resp; it.per=f.per; it.last=f.last; it.lim=f.lim;
+    it.a5=f.a5; it.hs=f.hs; it.notes=f.notes; it.ref=f.ref;
+  } else {
+    state.items.push({ id:uid(), num:null, sec:f.sec, mat:f.mat, resp:f.resp, per:f.per, last:f.last, lim:f.lim, a5:f.a5, hs:f.hs, notes:f.notes, ref:f.ref, hist:[], u:Date.now() });
+  }
+  save(); renderAll(); closeSheet();
+  toast("💾 Matériel enregistré");
+}
+function renderHist(it){
+  var h = (it && it.hist && it.hist.length) ? it.hist.slice().reverse() : [];
+  E("histBox").innerHTML = h.length ? "<b style='font-size:13px'>🕘 Historique</b>" + h.map(function(e){
+    return '<div class="hist">✔ ' + fmtDate(e.d) + (e.n ? " — " + esc(e.n) : "") + '</div>';
+  }).join("") : "";
+}
+function doControle(){
+  var it = getIt(openId); if(!it) return;
+  var d = E("ctlDate").value || today();
+  var n = E("ctlNote").value.trim();
+  _undo = { type:"check", id:it.id, last:it.last, hist:JSON.parse(JSON.stringify(it.hist||[])) };
+  it.last = d;
+  if(!it.hist) it.hist = [];
+  it.hist.push({ d:d, n:n });
+  if(!it.per && !it.lim) toast("✅ Contrôle du " + fmtDate(d) + " enregistré — ⚠️ sans périodicité, aucun prochain contrôle n'est calculé", "Annuler", undoLast);
+  else toast("✅ Contrôle du " + fmtDate(d) + " enregistré", "Annuler", undoLast);
+  save(); renderAll(); openItem(it.id); E("ctlDate").value = today(); E("ctlNote").value = "";
+}
+function quickCheck(id){
+  var it = getIt(id); if(!it) return;
+  _undo = { type:"check", id:it.id, last:it.last, hist:JSON.parse(JSON.stringify(it.hist||[])) };
+  it.last = today();
+  if(!it.hist) it.hist = [];
+  it.hist.push({ d:today(), n:"" });
+  save(); renderAll();
+  toast("✅ " + it.mat + " contrôlé aujourd'hui", "Annuler", undoLast);
+}
+function deleteItem(){
+  var it = getIt(openId); if(!it) return;
+  if(!window.confirm("Supprimer « " + (it.mat||"") + " » ?")) return;
+  state.tombs[it.id] = Date.now();
+  state.items = state.items.filter(function(x){ return x.id !== it.id; });
+  _undo = { type:"del", item:JSON.parse(JSON.stringify(it)) };
+  save(); renderAll(); closeSheet();
+  toast("🗑️ Matériel supprimé", "Annuler", undoLast);
+}
+
+/* ---------------- export / import ---------------- */
+function exportData(){ return JSON.stringify({ v:1, app:"sos-heli-controles", exported:new Date().toISOString(), items:state.items, tombs:state.tombs }); }
+function download(name, content, mime){
+  var blob = new Blob([content], { type:mime||"application/octet-stream" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 800);
+}
+function exportFile(){ download("sos-heli-controles-" + today() + ".json", exportData(), "application/json"); }
+function exportCsv(){
+  var head = ["N°","SECTION","MATÉRIEL / ÉLÉMENT","RESPONSABLE","PÉRIODICITÉ (MOIS)","DATE DERNIER CONTRÔLE","DATE LIMITE","PROCHAIN CONTRÔLE","JOURS RESTANTS","STATUT","OBSERVATION / NOTES","RÉFÉRENCE DOSSIER"];
+  function q(v){ return '"' + String(v==null?"":v).replace(/"/g,'""') + '"'; }
+  var rows = [head.map(q).join(";")];
+  state.items.forEach(function(it){
+    var n = nextOf(it).d, k = statutOf(it);
+    rows.push([it.num==null?"":it.num, it.sec, it.mat, it.resp||"", it.per==null?"":it.per, it.last||"", it.lim||"", n||"", n?daysTo(n):"", STATUTS[k].e + " " + STATUTS[k].label, it.notes||"", it.ref||""].map(q).join(";"));
+  });
+  download("suivi-controles-sos-heli-" + today() + ".csv", "\uFEFF" + rows.join("\r\n"), "text/csv");
+  toast("📄 CSV exporté — ouvrable dans Excel");
+}
+function importFile(ev){
+  var f = ev.target.files && ev.target.files[0]; if(!f) return;
+  var r = new FileReader();
+  r.onload = function(){ importJsonText(r.result, true); };
+  r.readAsText(f);
+}
+function importJsonText(txt, force){
+  var data;
+  try{ data = JSON.parse(txt); }catch(e){ toast("⚠️ Fichier illisible"); return false; }
+  if(!data || !Array.isArray(data.items)){ toast("⚠️ Format inconnu"); return false; }
+  if(!force && !window.confirm("Remplacer les " + state.items.length + " matériels actuels par les " + data.items.length + " du fichier ?")) return false;
+  try{ localStorage.setItem(KEY + "-secours", localStorage.getItem(KEY)); }catch(e){}
+  state.items = data.items; state.tombs = data.tombs || {};
+  primeShadow(); persist(); renderAll();
+  toast("📥 " + data.items.length + " matériels importés");
+  return true;
+}
+
+/* ---------------- Google Drive ---------------- */
+var _tok = null, _tokAt = 0;
+function driveCfgOk(){ return !!(state.cfg.dCid && state.cfg.dRefresh); }
+function driveToken(){
+  if(_tok && (Date.now() - _tokAt) < 50*60000) return Promise.resolve(_tok);
+  var body = "client_id=" + encodeURIComponent(state.cfg.dCid)
+    + (state.cfg.dSecret ? "&client_secret=" + encodeURIComponent(state.cfg.dSecret) : "")
+    + "&refresh_token=" + encodeURIComponent(state.cfg.dRefresh)
+    + "&grant_type=refresh_token";
+  return fetch("https://oauth2.googleapis.com/token", { method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" }, body:body })
+    .then(function(r){ return r.json().then(function(j){
+      if(!r.ok || !j.access_token) throw new Error(j.error_description || j.error || "token refusé");
+      _tok = j.access_token; _tokAt = Date.now(); return _tok;
+    }); });
+}
+function fetchTO(url, opts, ms){
+  var ctl = new AbortController();
+  var to = setTimeout(function(){ ctl.abort(); }, ms || 20000);
+  var o = Object.assign({}, opts || {});
+  o.signal = ctl.signal;
+  return fetch(url, o).then(function(r){ clearTimeout(to); return r; }, function(e){ clearTimeout(to); throw e; });
+}
+function driveApi(path, opts){
+  return driveToken().then(function(tok){
+    var o = Object.assign({}, opts || {});
+    o.headers = Object.assign({}, o.headers || {}, { Authorization:"Bearer " + tok });
+    return fetchTO("https://www.googleapis.com/" + path, o);
+  });
+}
+function driveFind(name, mime, parent){
+  var q = "name='" + name.replace(/'/g,"\\'") + "' and mimeType='" + mime + "' and trashed=false"
+    + (parent ? " and '" + parent + "' in parents" : "");
+  return driveApi("drive/v3/files?q=" + encodeURIComponent(q) + "&fields=files(id,name)&pageSize=5")
+    .then(function(r){ return r.json(); })
+    .then(function(j){ return (j.files && j.files[0]) ? j.files[0].id : null; });
+}
+function driveCreateFolder(name){
+  return driveApi("drive/v3/files?fields=id", { method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ name:name, mimeType:"application/vnd.google-apps.folder", fields:"id" }) })
+    .then(function(r){ return r.json(); }).then(function(j){ if(!j.id) throw new Error("dossier non créé"); return j.id; });
+}
+function driveFolderId(){
+  return driveFind(state.cfg.dFolder || "taffbmpm", "application/vnd.google-apps.folder")
+    .then(function(id){ return id || driveCreateFolder(state.cfg.dFolder || "taffbmpm"); });
+}
+function driveFileId(folderId){
+  return driveFind("sos-heli-controles.json", "application/json", folderId);
+}
+function driveDownload(fileId){
+  return driveApi("drive/v3/files/" + fileId + "?alt=media").then(function(r){ return r.text(); });
+}
+function driveUploadCreate(folderId, text){
+  var meta = JSON.stringify({ name:"sos-heli-controles.json", parents:[folderId] });
+  var body = "--sosb\nContent-Type: application/json; charset=UTF-8\n\n" + meta + "\n--sosb\nContent-Type: application/json\n\n" + text + "\n--sosb--";
+  return driveApi("upload/drive/v3/files?uploadType=multipart&fields=id", { method:"POST", headers:{ "Content-Type":"multipart/related; boundary=sosb" }, body:body })
+    .then(function(r){ return r.json(); });
+}
+function driveUploadUpdate(fileId, text){
+  return driveApi("upload/drive/v3/files/" + fileId + "?uploadType=media&fields=id", { method:"PATCH", headers:{ "Content-Type":"application/json" }, body:text })
+    .then(function(r){ return r.json(); });
+}
+function driveSend(manual){
+  if(!driveCfgOk()){
+    if(manual) toast("⚙️ Configure le Drive dans les options ci-dessous");
+    return Promise.resolve();
+  }
+  if(driveSending){
+    if(Date.now() - driveSendingAt < 120000){
+      if(manual) toast("☁️ Envoi déjà en cours — celui-ci repartira juste après");
+      _saveSeq++; _dirty = true; return Promise.resolve();
+    }
+    if(manual) toast("⚠️ Un envoi semblait bloqué — nouvelle tentative");
+  }
+  driveSending = true; driveSendingAt = Date.now();
+  var seq0 = _saveSeq;
+  var myLock = driveSendingAt;
+  return driveFolderId()
+    .then(function(fid){ return driveFileId(fid).then(function(fileId){
+      var up = function(text){
+        var f = fileId ? driveUploadUpdate(fileId, text) : driveUploadCreate(fid, text);
+        return f.then(function(j){
+          if(!j.id) throw new Error("upload refusé");
+          state.driveSyncedAt = Date.now();
+          _dirty = _saveSeq > seq0;
+          persist(); renderPill(); renderBackupCard();
+          if(manual) toast("☁️ Sauvegardé sur Drive" + (_dirty ? " (d’autres changements repartiront)" : ""));
+        });
+      };
+      if(!fileId) return up(JSON.stringify({ v:1, app:"sos-heli-controles", items:state.items, tombs:state.tombs }));
+      return driveDownload(fileId).then(function(txt){
+        var remote = null;
+        try{ remote = JSON.parse(txt); }catch(e){}
+        var m = mergeRemote(remote);
+        if(m.added || m.changed || m.removed){ persist(); renderAll(); }
+        if(manual && (m.added || m.changed || m.removed))
+          toast("☁️ Fusion : +" + m.added + " ~" + m.changed + " −" + m.removed);
+        return up(JSON.stringify({ v:1, app:"sos-heli-controles", items:state.items, tombs:state.tombs }));
+      }, function(){ return up(JSON.stringify({ v:1, app:"sos-heli-controles", items:state.items, tombs:state.tombs })); });
+    }); })
+    .catch(function(e){
+      if(manual) toast("⚠️ Sauvegarde Drive impossible : " + (e && e.message ? e.message : "réseau"));
+    })
+    .then(function(){ if(driveSendingAt === myLock){ driveSending = false; } });
+}
+function driveRestore(){
+  if(!driveCfgOk()){ toast("⚙️ Configure le Drive d’abord"); return; }
+  driveFolderId().then(function(fid){
+    return driveFileId(fid).then(function(fileId){
+      if(!fileId) throw new Error("aucune sauvegarde trouvée");
+      return driveDownload(fileId);
+    });
+  }).then(function(txt){
+    importJsonText(txt, false);
+  }).catch(function(e){ toast("⚠️ Restauration impossible : " + (e && e.message ? e.message : "réseau")); });
+}
+function saveDriveCfg(){
+  state.cfg.dCid = E("dCid").value.trim();
+  state.cfg.dSecret = E("dSecret").value.trim();
+  state.cfg.dRefresh = E("dRefresh").value.trim();
+  state.cfg.dFolder = E("dFolder").value.trim() || "taffbmpm";
+  persist(); renderBackupCard();
+  if(!driveCfgOk()){ toast("⚠️ Client ID et Refresh Token obligatoires"); return; }
+  _tok = null; _tokAt = 0;
+  driveSend(true);
+}
+function driveDisconnect(){
+  state.cfg.dCid = ""; state.cfg.dSecret = ""; state.cfg.dRefresh = "";
+  _tok = null; _tokAt = 0;
+  persist(); renderBackupCard(); toast("🔌 Drive déconnecté");
+}
+function toggleAuto(){ state.cfg.driveAuto = E("dAuto").checked; persist(); }
+
+/* ---------------- recherche / events ---------------- */
+function initEvents(){
+  E("q").addEventListener("input", function(){
+    state.cfg.q = E("q").value; persist(); renderList();
+  });
+  E("q").value = state.cfg.q || "";
+  E("secSel").addEventListener("change", function(){
+    state.cfg.secFilter = E("secSel").value; persist(); renderList();
+  });
+  document.addEventListener("visibilitychange", function(){
+    if(document.hidden && _dirty && driveCfgOk() && state.cfg.driveAuto) driveSend(false);
+  });
+}
+function boot(){
+  load();
+  initEvents();
+  renderAll();
+  if(driveCfgOk() && state.cfg.driveAuto) driveSend(false);
+}
+boot();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").then(function(reg){
+    reg.addEventListener("updatefound", function(){
+      var n = reg.installing;
+      if(n) n.addEventListener("statechange", function(){
+        if(n.state === "installed" && navigator.serviceWorker.controller) toast("🔄 Nouvelle version installée — recharge la page");
+      });
+    });
+  }).catch(function(){});
+}
+</script>
+</body>
+</html>
