@@ -33,3 +33,7 @@ registre Excel « SUIVI CONTROL SOS_HELI.xlsx » (321 matériels, import 2026-10
 - `tools/gen-icons.js` : icônes PNG générées au build (pur Node + zlib).
 - `v1-test-harness.js` : harnais Node (89 tests) — `node v1-test-harness.js index.html sw.js` (joué par la CI à chaque push).
 - Données initiales : `SEED` embarqué dans `index.html` (extrait de l'Excel le 2026-10-11).
+
+## Déploiement
+
+Chaque push sur `main` redéploie le site (workflow GitHub Actions) et rejoue les tests.
