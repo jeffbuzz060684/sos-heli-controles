@@ -27,6 +27,13 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: "."
-      - name: Déployer
+      - name: Déployer (1re tentative)
         id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Pause 30 s (artifact tout juste publié parfois invisible pour deploy-pages)
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+      - name: Déployer (2e tentative)
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
