@@ -121,7 +121,7 @@ function resetConfirm(v){ confirmAnswer = v; }
 (async function main(){
   console.log("=== A. Chargement & invariants ===");
   T("seed chargé : 321 matériels", state.items.length === 321);
-  T("version v3.1", APP_VERSION === "v3.1");
+  T("version v3.2", APP_VERSION === "v3.2");
   T("clé storage", KEY === "sos-heli-controles-v1");
   T("sw.js : cache aligné sur la version app", swSrc.indexOf("sos-heli-controles-" + APP_VERSION) >= 0);
   T("sw.js : pas d'ancien cache", swSrc.indexOf("sos-heli-controles-v0") < 0);
@@ -140,7 +140,7 @@ function resetConfirm(v){ confirmAnswer = v; }
   const m4 = state.items.find(i => i.num === 35); // PARAMASQUE MICRO-K
   T("num 35 présent (PARAMASQUE)", !!m4 && m4.mat.indexOf("PARAMASQUE") >= 0);
   T("num 35 : plafonné à la date limite 2026-10-16", nextOf(m4).d === "2026-10-16" && nextOf(m4).capped === true);
-  T("num 35 : statut à prévoir", statutOf(m4) === "prevoir");
+  T("num 35 : limite 2026-10-16 dépassée, contrôle à jour → périmé (v3.2)", statutOf(m4) === "perime");
   const m1 = state.items.find(i => i.num === 1);
   T("num 1 : HS via notes REFORME", statutOf(m1) === "hs" && isHs(m1));
   const m10 = state.items.find(i => i.num === 10);
@@ -178,12 +178,12 @@ function resetConfirm(v){ confirmAnswer = v; }
   T("Annuler : statut retour en retard", statutOf(it292) === "retard");
   // contrôle daté + note via la feuille
   openItem(it292.id);
-  document.getElementById("ctlDate").value = "2026-10-05";
+  document.getElementById("ctlDate").value = today();
   document.getElementById("ctlNote").value = "Vidange + bougie";
   doControle();
-  T("doControle : date choisie enregistrée", it292.last === "2026-10-05");
+  T("doControle : date choisie enregistrée", it292.last === today());
   T("doControle : note dans l'historique", it292.hist[0].n === "Vidange + bougie");
-  T("doControle : statut recalculé (J–25, seuil 5 j → OK)", statutOf(it292) === "ok");
+  T("doControle : statut recalculé OK (seuil 5 j, prochain à ~1 mois)", statutOf(it292) === "ok");
   closeSheet();
   const noPer = state.items.find(i => !i.per && !i.lim && !isHs(i));
   if(noPer){
@@ -236,12 +236,13 @@ function resetConfirm(v){ confirmAnswer = v; }
 
   console.log("=== E. Rendu & filtres ===");
   renderAll();
-  const counts = { retard: 0, prevoir: 0, ok: 0, hs: 0, sans: 0 };
+  const counts = { retard: 0, perime: 0, prevoir: 0, ok: 0, hs: 0, sans: 0 };
   state.items.forEach(i => { const k = statutOf(i); if(k === "reviser") counts.prevoir++; else counts[k]++; });
   const statsHtml = document.getElementById("stats").innerHTML;
   T("stats : retards affichés", statsHtml.indexOf("🔴 " + counts.retard) >= 0);
   T("stats : OK affichés", statsHtml.indexOf("🟢 " + counts.ok) >= 0);
   T("stats : HS affichés", statsHtml.indexOf("⛔ " + counts.hs) >= 0);
+  T("stats : périmés affichés (v3.2)", statsHtml.indexOf("📅 " + counts.perime) >= 0);
   T("liste : section CAPINAV présente", document.getElementById("list").innerHTML.indexOf("CAPINAV") >= 0);
   setStatFilter("retard");
   T("filtre retard : tous les visibles en retard", visibleItems().every(i => statutOf(i) === "retard") && visibleItems().length === counts.retard);
@@ -655,6 +656,40 @@ function resetConfirm(v){ confirmAnswer = v; }
     T("réel : fidèle au registre (277 = seule ligne sans nom, per 1)", rEmpty.length === 1 && rEmpty[0].num === 277 && rEmpty[0].per === 1 && rEmpty[0].sec === "Claie moto-pompe WAJAX-MARK-3");
     T("réel : 4 lignes sans n° mais avec matériel", realItems.filter(i => (i.num === null || i.num === undefined) && i.mat && i.mat.trim()).length === 4);
   }
+
+  console.log("=== N. Statut périmé & export retards (v3.2) ===");
+  state = defaultState(); primeShadow(); persist(); renderAll();
+  const pelCount = state.items.filter(i => statutOf(i) === "perime").length;
+  T("v3.2 : périmés détectés (limite dépassée, contrôle à jour)", pelCount >= 5);
+  const m35v2 = state.items.find(i => i.num === 35);
+  T("v3.2 : num 35 (PARAMASQUE) périmé", statutOf(m35v2) === "perime");
+  T("v3.2 : xlStatus périmé = « En retard » (fidèle à la formule Excel)", xlStatus(m35v2) === "🔴 En retard");
+  T("v3.2 : HS marqué ⛔ dans la liste", STATUTS.hs.e === "⛔");
+  const probePer = { sec: "X", mat: "y", per: 12, last: today(), lim: "2020-01-01", hist: [] };
+  T("v3.2 : contrôle du jour + limite dépassée → périmé", statutOf(probePer) === "perime");
+  const probeRet = { sec: "X", mat: "y", per: 1, last: "2020-01-01", hist: [] };
+  T("v3.2 : sans plafonnement, dépassement = vrai retard", statutOf(probeRet) === "retard");
+  const probeOld = { sec: "X", mat: "y", per: 12, last: "2025-09-18", lim: "2026-09-01", hist: [] };
+  T("v3.2 : cycle aussi dépassé = vrai retard, pas périmé", statutOf(probeOld) === "retard");
+  const kAlv2 = alertItems();
+  T("v3.2 : alertes sans les périmés", kAlv2.every(i => statutOf(i) !== "perime"));
+  const alH2 = document.getElementById("alerts").innerHTML;
+  T("v3.2 : bandeau mentionne les péremptions à requalifier", pelCount === 0 || alH2.indexOf("péremption(s) à requalifier") >= 0);
+  const stH2 = document.getElementById("stats").innerHTML;
+  T("v3.2 : chip périmés rendu", stH2.indexOf("📅 " + pelCount) >= 0);
+  const liH2 = document.getElementById("list").innerHTML;
+  T("v3.2 : mention « limite à actualiser » dans la liste", pelCount === 0 || liH2.indexOf("limite à actualiser") >= 0);
+  T("v3.2 : bouton export retards présent", document.getElementById("backupCard").innerHTML.indexOf("exportRetards()") >= 0);
+  let cap2 = null; const dl2 = global.download;
+  global.download = (name, content) => { cap2 = { name, content }; };
+  exportRetards();
+  const rN = state.items.filter(i => ["retard", "perime"].indexOf(statutOf(i)) >= 0).length;
+  const rLines = cap2.content.replace(/^\uFEFF/, "").split("\r\n");
+  T("v3.2 : export retards — nom daté", cap2.name.indexOf("retards-sos-heli-") === 0 && cap2.name.indexOf(".csv") > 0);
+  T("v3.2 : export retards — lignes = retards + périmés + en-tête", rLines.length === rN + 1);
+  T("v3.2 : export retards — BOM UTF-8", cap2.content.charCodeAt(0) === 0xFEFF);
+  T("v3.2 : export retards — tri par prochaine date", (function(){ for(let i2 = 1; i2 < rLines.length - 1; i2++){ const a2 = rLines[i2].split('";"')[4], b2 = rLines[i2 + 1].split('";"')[4]; if(a2 && b2 && a2 > b2) return false; } return true; })());
+  global.download = dl2;
 
   if(driveTimer) clearTimeout(driveTimer);
   console.log("\n================================");

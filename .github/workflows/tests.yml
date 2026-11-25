@@ -12,3 +12,5 @@ jobs:
           node-version: 20
       - name: Harnais v1
         run: node v1-test-harness.js index.html sw.js
+      - name: Boot DOM strict
+        run: node strict-dom-test.js
