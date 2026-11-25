@@ -91,6 +91,10 @@ vm.runInThisContext(appJs, { filename: "app.js" });
   T("DOM strict : bouton export retards dans la carte sauvegarde", document.getElementById("backupCard").innerHTML.indexOf("exportRetards()") >= 0);
   await new Promise(r => setTimeout(r, 60));
 
+  // nettoyage des timers de l'app (driveTimer auto 30 s, toast 6 s) pour un exit immédiat
+  try{ if(typeof driveTimer !== "undefined" && driveTimer) clearTimeout(driveTimer); }catch(e){}
+  try{ if(typeof toastTimer !== "undefined" && toastTimer) clearTimeout(toastTimer); }catch(e){}
+
   console.log("\nDOM STRICT : " + ok + " ok, " + fail + " échoués");
-  if(fail) process.exit(1);
+  process.exit(fail ? 1 : 0);
 })().catch(e => { console.error("CRASH DOM STRICT :", e && e.message ? e.message : e); process.exit(2); });
