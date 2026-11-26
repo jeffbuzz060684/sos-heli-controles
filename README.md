@@ -3,6 +3,32 @@
 PWA de suivi des contrôles périodiques du matériel SOS HELI, générée à partir du
 registre Excel « SUIVI CONTROL SOS_HELI.xlsx » (321 matériels, import 2026-10-11).
 
+## v4 (2026-11-26) : Excel Drive automatique
+
+- **📊 Répercussion automatique dans Drive** : à chaque sauvegarde (30 s après
+  une modification, verrouillage d'écran, ou bouton), l'app génère l'Excel
+  « SUIVI CONTROL SOS_HELI.xlsx » **dans le même dossier Drive que le JSON**
+  (création au premier envoi, PATCH ensuite). Case à cocher « Répercuter chaque
+  modification dans l'Excel du Drive » + bouton manuel + ligne d'état
+  (dernière mise à jour) dans la carte sauvegarde. Échec non bloquant.
+- **Le fichier Excel poussé embarque toutes les améliorations v4** :
+  - **🔵 statut « périmé — requalifier » distinct du vrai retard** dans la
+    formule K (l'Excel d'origine comptait ces lignes « en retard ») ;
+  - **⛔ Hors service / Réformé** différencié dans le STATUT (au lieu de rouge) ;
+  - **colonne N « SEUIL ALERTE (JOURS) »** explicite (60, 5 pour les WORMS GE) ;
+  - **feuille Synthèse** : compteurs vivants (HG/red/pér/7j) + tableau par
+    section (52 sections, total général) ;
+  - **feuille Journal (app)** : relevé des 200 dernières modifications ;
+  - **filtre automatique** A8:N, **mise en forme conditionnelle** (statuts + jours
+    restants, 8 dxfs), **validations** (périodicité 1-120 mois, seuil 1-365 j) ;
+  - **dates au format JJ/MM/AAAA** ; recalcul forcé à l'ouverture.
+- L'export local « 🟩 Exporter Excel (.xlsx) » produit le même fichier, daté.
+- Import : le lecteur .xlsx lit les fichiers v3/v4 (colonne N et nouveaux
+  statuts tolérés, détection a5 conservée via l'étiquette « 5 JOURS »).
+- Harnais 191 tests (0 échec) + boot DOM strict ; OOXML v4 vérifié openpyxl
+  **et** recalculé par LibreOffice (1 621 formules conformes au seed :
+  321 matériels, 13 retards, 9 périmés).
+
 ## v3.2 (2026-11-25)
 
 - **📅 Statut « périmé » distinct** : un matériel contrôlé à jour dans son cycle

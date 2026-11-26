@@ -68,9 +68,10 @@ global.FileReader = function(){
 let reqs = [];
 let __remote = null;          // contenu actuel du fichier Drive
 let __remoteExists = false;   // le fichier Drive existe-t-il
+let __xlExists = false;       // v4 : l'Excel Drive existe-t-il
 let __tokenFail = false;
 global.fetch = function(url, opts){
-  reqs.push({ url, method: (opts && opts.method) || "GET", body: opts && opts.body });
+  reqs.push({ url, method: (opts && opts.method) || "GET", body: opts && opts.body, headers: (opts && opts.headers) || {} });
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       if(String(url).indexOf("oauth2.googleapis.com/token") >= 0){
@@ -84,20 +85,28 @@ global.fetch = function(url, opts){
           if(__remoteExists) return resolve({ ok: true, json: () => Promise.resolve({ files: [{ id: "FILE1", name: "sos-heli-controles.json" }] }) });
           return resolve({ ok: true, json: () => Promise.resolve({ files: [] }) });
         }
+        if(q.indexOf("spreadsheetml") >= 0){
+          return resolve({ ok: true, json: () => Promise.resolve({ files: __xlExists ? [{ id: "XFILE1", name: "SUIVI CONTROL SOS_HELI.xlsx" }] : [] }) });
+        }
         return resolve({ ok: true, json: () => Promise.resolve({ files: [] }) });
       }
       if(String(url).indexOf("alt=media") >= 0){
         return resolve({ ok: true, text: () => Promise.resolve(__remote || "") });
       }
       if(String(url).indexOf("/upload/drive/v3/files") >= 0){
+        const uct = (opts && opts.headers && opts.headers["Content-Type"]) || "";
         if(opts && opts.body){
           if(String(url).indexOf("uploadType=multipart") >= 0){
-            const mMatch = String(opts.body).match(/Content-Type: application\/json\n\n([\s\S]*?)\n--sosb--$/);
-            __remote = mMatch ? mMatch[1] : null;
-          } else {
-            __remote = String(opts.body);
-          }
+            if(uct.indexOf("sosbx") >= 0){ __xlExists = true; }
+            else {
+              const mMatch = String(opts.body).match(/Content-Type: application\/json\n\n([\s\S]*?)\n--sosb--$/);
+              __remote = mMatch ? mMatch[1] : null;
+              __remoteExists = true;
+            }
+          } else if(String(uct).indexOf("spreadsheetml") >= 0){ __xlExists = true; }
+          else { __remote = String(opts.body); __remoteExists = true; }
         }
+        if(String(uct).indexOf("spreadsheetml") >= 0) return resolve({ ok: true, json: () => Promise.resolve({ id: "XFILE1" }) });
         __remoteExists = true;
         return resolve({ ok: true, json: () => Promise.resolve({ id: "FILE1" }) });
       }
@@ -121,7 +130,7 @@ function resetConfirm(v){ confirmAnswer = v; }
 (async function main(){
   console.log("=== A. Chargement & invariants ===");
   T("seed chargé : 321 matériels", state.items.length === 321);
-  T("version v3.2", APP_VERSION === "v3.2");
+  T("version v4", APP_VERSION === "v4");
   T("clé storage", KEY === "sos-heli-controles-v1");
   T("sw.js : cache aligné sur la version app", swSrc.indexOf("sos-heli-controles-" + APP_VERSION) >= 0);
   T("sw.js : pas d'ancien cache", swSrc.indexOf("sos-heli-controles-v0") < 0);
@@ -293,23 +302,28 @@ function resetConfirm(v){ confirmAnswer = v; }
   console.log("=== G. Drive bout en bout (stubs) ===");
   state.cfg.dCid = "CID"; state.cfg.dRefresh = "RTOK"; state.cfg.dFolder = "taffbmpm";
   _tok = null; _tokAt = 0;
-  __remoteExists = false; __remote = null;
+  __remoteExists = false; __remote = null; __xlExists = false;
   reqs = [];
   await driveSend(true);
   await flush();
+  for(let wx = 0; wx < 60 && !(state.xlSyncedAt > 0 && __xlExists); wx++) await new Promise(r => setTimeout(r, 10));
   T("drive : token demandé", reqs.some(r => r.url.indexOf("oauth2.googleapis.com/token") >= 0));
   T("drive : dossier trouvé (taffbmpm)", reqs.some(r => String(r.url).indexOf("google-apps.folder") >= 0));
   T("drive : fichier créé (multipart)", reqs.some(r => String(r.url).indexOf("uploadType=multipart") >= 0));
   T("drive : contenu = les matériels", __remote && JSON.parse(__remote).items.length === state.items.length);
   T("drive : driveSyncedAt posé", state.driveSyncedAt > 0);
   T("drive : pilule à jour", document.getElementById("drivePill").textContent.indexOf("à jour") >= 0);
+  T("v4 : Excel recherché puis créé sur Drive", __xlExists === true && reqs.some(r => String(r.url).indexOf("q=") >= 0 && decodeURIComponent(String(r.url)).indexOf("spreadsheetml") >= 0));
+  T("v4 : xlSyncedAt posé après création Excel", state.xlSyncedAt > 0);
   // 2e envoi : fichier existe → téléchargé, fusionné, PATCH
   reqs = [];
   await driveSend(true);
   await flush();
+  for(let wx2 = 0; wx2 < 60 && !reqs.some(r => r.method === "PATCH" && String(r.url).indexOf("upload/drive/v3/files/XFILE1") >= 0); wx2++) await new Promise(r => setTimeout(r, 10));
   T("drive 2 : téléchargé avant envoi", reqs.some(r => String(r.url).indexOf("alt=media") >= 0));
   T("drive 2 : PATCH de mise à jour", reqs.some(r => r.method === "PATCH" && String(r.url).indexOf("uploadType=media") >= 0));
   T("drive 2 : verrou libéré", driveSending === false);
+  T("v4 drive 2 : Excel trouvé (XFILE1) puis PATCH média binaire", reqs.some(r => r.method === "PATCH" && String(r.url).indexOf("upload/drive/v3/files/XFILE1") >= 0));
   // échec token
   __tokenFail = true; _tok = null; _tokAt = 0; reqs = [];
   await driveSend(true);
@@ -492,7 +506,7 @@ function resetConfirm(v){ confirmAnswer = v; }
     return files;
   }
   const xf = unzipN(new Uint8Array(xb));
-  T("xlsx : 8 fichiers du package OOXML", Object.keys(xf).length === 8 && !!xf["[Content_Types].xml"] && !!xf["xl/worksheets/sheet1.xml"] && !!xf["xl/styles.xml"] && !!xf["docProps/core.xml"]);
+  T("xlsx : 10 fichiers du package OOXML (v4 : 3 feuilles)", Object.keys(xf).length === 10 && !!xf["[Content_Types].xml"] && !!xf["xl/worksheets/sheet1.xml"] && !!xf["xl/worksheets/sheet2.xml"] && !!xf["xl/worksheets/sheet3.xml"] && !!xf["xl/styles.xml"] && !!xf["docProps/core.xml"]);
   const wbx = xf["xl/workbook.xml"].toString("utf8");
   T("xlsx : feuille « Registre Matériel »", wbx.includes('name="Registre Matériel"'));
   T("xlsx : recalcul forcé à l'ouverture (TODAY() vivant)", wbx.includes('fullCalcOnLoad="1"'));
@@ -503,21 +517,21 @@ function resetConfirm(v){ confirmAnswer = v; }
   T("xlsx : formule prochain contrôle exacte (H9)", sx.includes('IF(AND(ISNUMBER(F9),ISNUMBER(E9)),IF(AND(ISNUMBER(G9),EDATE(F9,E9)&gt;G9),G9,EDATE(F9,E9)),IF(ISNUMBER(G9),G9,""))'));
   T("xlsx : formule plafonné exacte (I9)", sx.includes('IF(AND(ISNUMBER(F9),ISNUMBER(E9),ISNUMBER(G9),EDATE(F9,E9)&gt;G9),"⚠️ Oui","")'));
   T("xlsx : formule jours restants exacte (J9)", sx.includes('IF(ISNUMBER(H9),H9-TODAY(),"")'));
-  T("xlsx : formule statut ≤ 2 mois exacte (K9)", sx.includes('IF($H9&lt;TODAY(),"🔴 En retard",IF($H9-TODAY()&lt;=60,"🟠 À prévoir (≤ 2 mois)","🟢 OK")'));
-  T("xlsx : détection HS par notes REFORME/H.S (K9)", sx.includes('IF(OR(ISNUMBER(SEARCH("REFORME",$L9)),ISNUMBER(SEARCH("H.S",$L9))),"🔴 Hors service / Réformé"'));
+  T("xlsx : formule statut v4 périmé/retard/prévoir exacte (K9)", sx.includes('IF(AND(ISNUMBER($G9),ISNUMBER($F9),ISNUMBER($E9),$G9&lt;TODAY(),EDATE($F9,$E9)&gt;TODAY()),"🔵 Périmé — requalifier",IF($H9&lt;TODAY(),"🔴 En retard",IF($H9-TODAY()&lt;=$N9,"🟠 À prévoir (≤ 2 mois)","🟢 OK")'));
+  T("xlsx : détection HS par notes REFORME/H.S (K9, ⛔ v4)", sx.includes('IF(OR(ISNUMBER(SEARCH("REFORME",$L9)),ISNUMBER(SEARCH("H.S",$L9))),"⛔ Hors service / Réformé"'));
   const gi = state.items.findIndex(i => i.num === 292);
   const grow = 9 + gi;
-  T("xlsx : variante ≤ 5 JOURS sur les WORMS GE (K" + grow + ")", sx.includes('&lt;=5,"🟠 À prévoir (≤ 5 JOURS)"'));
+  T("xlsx : variante ≤ 5 JOURS sur les WORMS GE, seuil colonne N (K" + grow + ")", sx.includes('&lt;=$N' + grow + ',"🟠 À prévoir (≤ 5 JOURS)"'));
   T("xlsx : date serial du dernier contrôle GE 1 (F" + grow + ")", sx.includes('<c r="F' + grow + '" s="2"><v>' + isoToSerial(state.items[gi].last) + '</v></c>'));
-  T("xlsx : compteurs COUNTIF identiques à l'original", sx.includes("COUNTA(A9:A" + (8 + state.items.length) + ")") && sx.includes('COUNTIF(K9:K' + (8 + state.items.length) + ',"🟢 OK")') && sx.includes('COUNTIF(K9:K' + (8 + state.items.length) + ',"🔴 En retard")'));
-  T("xlsx : 10 fusions comme l'original", sx.includes('<mergeCells count="10">') && sx.includes('<mergeCell ref="A1:M1"/>') && sx.includes('<mergeCell ref="J4:K4"/>'));
+  T("xlsx : compteurs COUNTIF (total sur sections, statuts v4)", sx.includes("COUNTA(B9:B" + (8 + state.items.length) + ")") && sx.includes('COUNTIF(K9:K' + (8 + state.items.length) + ',"🟢 OK")') && sx.includes('COUNTIF(K9:K' + (8 + state.items.length) + ',"🔴 En retard")') && sx.includes('COUNTIF(K9:K' + (8 + state.items.length) + ',"⛔ Hors service / Réformé")') && sx.includes('COUNTIF(K9:K' + (8 + state.items.length) + ',"🔵 Périmé — requalifier")'));
+  T("xlsx : 10 fusions comme l'original (titres élargis à N)", sx.includes('<mergeCells count="10">') && sx.includes('<mergeCell ref="A1:N1"/>') && sx.includes('<mergeCell ref="J4:K4"/>'));
   T("xlsx : volet figé sous la ligne 8 (A9)", sx.includes('<pane ySplit="8" topLeftCell="A9"'));
   T("xlsx : quadrillage masqué comme l'original", sx.includes('showGridLines="0"'));
-  T("xlsx : 13 colonnes aux largeurs d'origine", (sx.match(/customWidth="1"/g) || []).length === 13 && sx.includes('width="117.43"'));
+  T("xlsx : 14 colonnes (SEUIL ALERTE ajoutée en N)", (sx.match(/customWidth="1"/g) || []).length === 14 && sx.includes('width="117.43"') && sx.includes("SEUIL ALERTE"));
   const stx = xf["xl/styles.xml"].toString("utf8");
-  T("xlsx : format date mm-dd-yy + jours entier", stx.includes('formatCode="mm-dd-yy"') && stx.includes('formatCode="0"'));
+  T("xlsx : format date dd/mm/yyyy + jours entier", stx.includes('formatCode="dd/mm/yyyy"') && stx.includes('formatCode="0"'));
   T("xlsx : Arial 20 gras partout, en-têtes bleus/blancs", stx.includes('<name val="Arial"/>') && stx.includes('rgb="FF2E5AAC"') && stx.includes('rgb="FFFFFFFF"'));
-  T("xlsx : statuts en cache pour lecture directe", sx.includes("⚪ Sans échéance connue</v>") && sx.includes("🔴 Hors service / Réformé</v>"));
+  T("xlsx : statuts en cache pour lecture directe (⛔/🔵 v4)", sx.includes("⚪ Sans échéance connue</v>") && sx.includes("⛔ Hors service / Réformé</v>") && sx.includes("🔵 Périmé — requalifier</v>"));
   T("xlsx : convention '/' du registre pour notes vides (colonne L)", (function(){ var nL = (sx.match(/r="L\d+" s="\d+" t="inlineStr"><is><t>\/<\/t><\/is>/g) || []).length; var nD = (sx.match(/r="D\d+" s="\d+" t="inlineStr"><is><t>\/<\/t><\/is>/g) || []).length; return nL === state.items.filter(function(i){ return !i.notes; }).length && nD === state.items.filter(function(i){ return i.resp === "/"; }).length; })());
   fs.writeFileSync("/tmp/export-test.xlsx", Buffer.from(xb));
   global.download = xDl;
@@ -663,7 +677,7 @@ function resetConfirm(v){ confirmAnswer = v; }
   T("v3.2 : périmés détectés (limite dépassée, contrôle à jour)", pelCount >= 5);
   const m35v2 = state.items.find(i => i.num === 35);
   T("v3.2 : num 35 (PARAMASQUE) périmé", statutOf(m35v2) === "perime");
-  T("v3.2 : xlStatus périmé = « En retard » (fidèle à la formule Excel)", xlStatus(m35v2) === "🔴 En retard");
+  T("v4 : xlStatus périmé distinct dans l'export Excel", xlStatus(m35v2) === "🔵 Périmé — requalifier");
   T("v3.2 : HS marqué ⛔ dans la liste", STATUTS.hs.e === "⛔");
   const probePer = { sec: "X", mat: "y", per: 12, last: today(), lim: "2020-01-01", hist: [] };
   T("v3.2 : contrôle du jour + limite dépassée → périmé", statutOf(probePer) === "perime");
@@ -690,6 +704,29 @@ function resetConfirm(v){ confirmAnswer = v; }
   T("v3.2 : export retards — BOM UTF-8", cap2.content.charCodeAt(0) === 0xFEFF);
   T("v3.2 : export retards — tri par prochaine date", (function(){ for(let i2 = 1; i2 < rLines.length - 1; i2++){ const a2 = rLines[i2].split('";"')[4], b2 = rLines[i2 + 1].split('";"')[4]; if(a2 && b2 && a2 > b2) return false; } return true; })());
   global.download = dl2;
+
+  console.log("=== O. v4 : Excel Drive automatique ===");
+  T("v4 : option Excel Drive activée par défaut", defaultState().cfg.xlAuto === true);
+  const bld = buildXlsxBytes();
+  T("v4 : buildXlsxBytes produit les octets", bld && bld.u8 && bld.u8.length > 10000 && bld.name === "SUIVI CONTROL SOS_HELI.xlsx");
+  const xf4 = unzipN(new Uint8Array(bld.u8));
+  T("v4 : 10 fichiers, sheet2/sheet3 présents", Object.keys(xf4).length === 10 && !!xf4["xl/worksheets/sheet2.xml"] && !!xf4["xl/worksheets/sheet3.xml"]);
+  const wb4 = xf4["xl/workbook.xml"].toString("utf8");
+  T("v4 : classeur à 3 feuilles nommées", wb4.includes('name="Registre Matériel"') && wb4.includes('name="Synthèse"') && wb4.includes('name="Journal (app)"'));
+  const s2 = xf4["xl/worksheets/sheet2.xml"].toString("utf8");
+  T("v4 : Synthèse compte sur le Registre (formules vivantes)", s2.includes("COUNTA('Registre Matériel'!$B$9:$B$") && s2.includes("COUNTIFS('Registre Matériel'!$J$9:$J$") && s2.includes("TOTAL GÉNÉRAL"));
+  const s3 = xf4["xl/worksheets/sheet3.xml"].toString("utf8");
+  T("v4 : Journal relevé (max 200 entrées + en-têtes)", s3.includes("JOURNAL DES MODIFICATIONS") && (s3.match(/<row /g) || []).length === Math.min(state.log.length, 200) + 3);
+  const sx4 = xf4["xl/worksheets/sheet1.xml"].toString("utf8");
+  const LR4 = 8 + state.items.length;
+  T("v4 : filtre automatique Registre A8:N", sx4.includes('<autoFilter ref="A8:N' + LR4 + '"/>'));
+  T("v4 : mise en forme conditionnelle statuts + jours", sx4.includes('<conditionalFormatting sqref="K9:K' + LR4 + '">') && sx4.includes('<conditionalFormatting sqref="J9:J' + LR4 + '">'));
+  T("v4 : validations périodicité + seuil", sx4.includes('sqref="E9:E' + LR4 + '"') && sx4.includes('sqref="N9:N' + LR4 + '"'));
+  const st4 = xf4["xl/styles.xml"].toString("utf8");
+  T("v4 : 8 styles conditionnels (dxfs) déclarés", st4.includes('<dxfs count="8">'));
+  const gi292 = state.items.findIndex(i => i.num === 292);
+  T("v4 : seuils en colonne N (5 pour WORMS GE, 60 sinon)", sx4.includes('r="N' + (9 + gi292) + '" s="1"><v>5</v>') && sx4.includes("<v>60</v>"));
+  fs.writeFileSync("/tmp/export-v4.xlsx", Buffer.from(bld.u8));
 
   if(driveTimer) clearTimeout(driveTimer);
   console.log("\n================================");
